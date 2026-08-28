@@ -48,8 +48,20 @@ bool Game::init()
     m_audio.init();
     m_hud.init();
 
+    // Resolve safe pref path for save file (cross-platform storage compliance)
+    char* prefPath = SDL_GetPrefPath("GoogleDeepMind", "OneMoreMove");
+    if (prefPath)
+    {
+        m_saveFilePath = std::string(prefPath) + "save_data.txt";
+        SDL_free(prefPath);
+    }
+    else
+    {
+        m_saveFilePath = "save_data.txt";
+    }
+
     // Load save data
-    SaveSystem::load(m_saveData);
+    SaveSystem::load(m_saveData, m_saveFilePath);
     if (!m_saveData.soundOn)
     {
         m_audio.toggleSound();
@@ -222,7 +234,7 @@ void Game::triggerGameOver()
     {
         m_saveData.highestLevel = m_currentLevel;
     }
-    SaveSystem::save(m_saveData);
+    SaveSystem::save(m_saveData, m_saveFilePath);
 
     m_state = GameState::GameOver;
 }
@@ -256,7 +268,7 @@ void Game::triggerLevelComplete()
     {
         m_saveData.highestLevel = m_currentLevel + 1;
     }
-    SaveSystem::save(m_saveData);
+    SaveSystem::save(m_saveData, m_saveFilePath);
 
     m_state = GameState::LevelComplete;
 }
@@ -306,7 +318,7 @@ void Game::handleMouseClick(float mx, float my)
             {
                 m_audio.toggleSound();
                 m_saveData.soundOn = m_audio.isSoundOn();
-                SaveSystem::save(m_saveData);
+                SaveSystem::save(m_saveData, m_saveFilePath);
             }
             // D-Pad checks
             else if (m_hud.getBtnUp().checkClick(mx, my))

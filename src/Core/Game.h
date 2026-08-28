@@ -2,6 +2,7 @@
 
 #include <SDL3/SDL.h>
 #include <vector>
+#include <string>
 #include "GameState.h"
 #include "World/Board.h"
 #include "Entities/Player.h"
@@ -79,4 +80,6 @@ private:
 
     // Timing
     Uint64 m_lastTime = 0;
+
+    std::string m_saveFilePath;
 };
