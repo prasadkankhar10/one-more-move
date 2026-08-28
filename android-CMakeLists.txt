@@ -1,0 +1,26 @@
+cmake_minimum_required(VERSION 3.6)
+
+project(OneMoreMoveSHARED)
+
+if(NOT TARGET SDL3::SDL3)
+    find_package(SDL3 CONFIG)
+endif()
+
+# Find all C++ source files in the project
+file(GLOB_RECURSE GAME_SOURCES
+    "Core/*.cpp"
+    "Entities/*.cpp"
+    "Systems/*.cpp"
+    "UI/*.cpp"
+    "World/*.cpp"
+    "main.cpp"
+)
+
+add_library(main SHARED
+    ${GAME_SOURCES}
+)
+
+# Set include directory to current folder (.) so that #include "Core/Game.h" resolves correctly
+target_include_directories(main PRIVATE .)
+
+target_link_libraries(main PRIVATE SDL3::SDL3)

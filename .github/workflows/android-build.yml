@@ -41,14 +41,16 @@ jobs:
           # Copy the android-project template to the workspace root
           cp -r sdl3-source/android-project ./android-build
           
-          # Create jni structure
-          mkdir -p android-build/app/jni/src
+          # Clean default files in app/jni/src
+          rm -rf android-build/app/jni/src/*
           
-          # Copy our game source code and CMakeLists into the Android JNI build folder
-          cp -r src android-build/app/jni/
-          cp CMakeLists.txt android-build/app/jni/
+          # Copy our game source code directly into the build folder
+          cp -r src/* android-build/app/jni/src/
           
-          # Set up symbolic links so Gradle/CMake can find SDL3 within the Android project
+          # Use our custom android CMakeLists.txt to compile the sources as libmain.so
+          cp android-CMakeLists.txt android-build/app/jni/src/CMakeLists.txt
+          
+          # Place the SDL3 source folder into app/jni/SDL so gradle can build it
           cp -r sdl3-source android-build/app/jni/SDL
 
       # 5. Build the Android project using Gradle wrapper
