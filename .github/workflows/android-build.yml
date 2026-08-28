@@ -57,8 +57,11 @@ jobs:
       - name: Build Debug APK with Gradle
         working-directory: ./android-build
         run: |
+          # Configure build.gradle to compile for all major ABIs instead of just arm64-v8a
+          sed -i "s/abiFilters 'arm64-v8a'/abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'/g" app/build.gradle
+          
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug -PBUILD_WITH_CMAKE=true
 
       # 6. Upload the compiled APK so the user can download it directly from GitHub
       - name: Upload APK Artifact
