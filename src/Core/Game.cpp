@@ -400,6 +400,20 @@ void Game::processInput()
         {
             handleMouseClick(event.button.x, event.button.y);
         }
+        else if (event.type == SDL_EVENT_FINGER_DOWN)
+        {
+            int winW = 0, winH = 0;
+            SDL_GetWindowSize(m_window, &winW, &winH);
+            
+            float wx = event.tfinger.x * static_cast<float>(winW);
+            float wy = event.tfinger.y * static_cast<float>(winH);
+            
+            float rx = 0.0f, ry = 0.0f;
+            if (SDL_RenderCoordinatesFromWindow(m_renderer, wx, wy, &rx, &ry))
+            {
+                handleMouseClick(rx, ry);
+            }
+        }
         else if (event.type == SDL_EVENT_KEY_UP)
         {
             m_keyReleased = true;
