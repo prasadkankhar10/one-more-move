@@ -1,0 +1,68 @@
+name: Build Android APK (Cloud Build)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout the game repository
+      - name: Checkout Game Source
+        uses: actions/checkout@v4
+
+      # 2. Setup JDK 17 (Required for modern Gradle & Android SDK tools)
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # 3. Setup Android SDK and NDK
+      # ubuntu-latest runners have Android SDK pre-installed. We just need to pin the NDK version.
+      - name: Setup Android NDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK
+        run: |
+          sdkmanager --install "ndk;26.1.10909125"
+          echo "ANDROID_NDK_HOME=${ANDROID_SDK_ROOT}/ndk/26.1.10909125" >> $GITHUB_ENV
+
+      # 4. Clone SDL3 to extract the Android Gradle Project Template
+      - name: Fetch SDL3 Source & Android Template
+        run: |
+          git clone --depth 1 --branch release-3.2.0 https://github.com/libsdl-org/SDL.git sdl3-source
+          
+          # Copy the android-project template to the workspace root
+          cp -r sdl3-source/android-project ./android-build
+          
+          # Create jni structure
+          mkdir -p android-build/app/jni/src
+          
+          # Copy our game source code and CMakeLists into the Android JNI build folder
+          cp -r src android-build/app/jni/
+          cp CMakeLists.txt android-build/app/jni/
+          
+          # Set up symbolic links so Gradle/CMake can find SDL3 within the Android project
+          cp -r sdl3-source android-build/app/jni/SDL
+
+      # 5. Build the Android project using Gradle wrapper
+      - name: Build Debug APK with Gradle
+        working-directory: ./android-build
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      # 6. Upload the compiled APK so the user can download it directly from GitHub
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OneMoreMove-Android-Debug-APK
+          path: android-build/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7

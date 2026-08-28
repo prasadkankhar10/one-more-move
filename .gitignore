@@ -1,0 +1,23 @@
+# Ignore CMake build directories
+/build/
+/out/
+/CMakeSettings.json
+/CMakeUserPresets.json
+
+# Ignore Visual Studio files
+/.vs/
+/*.user
+/*.suo
+/*.db
+/*.ipch
+
+# Ignore compiled binaries
+*.exe
+*.dll
+*.so
+*.a
+*.lib
+*.pdb
+
+# Ignore save file
+/save_data.txt
