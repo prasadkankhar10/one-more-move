@@ -14,6 +14,7 @@ bool SaveSystem::save(const SaveData& data, const std::string& filename)
     outFile << data.highScore << "\n";
     outFile << data.highestLevel << "\n";
     outFile << (data.soundOn ? 1 : 0) << "\n";
+    outFile << data.controlMode << "\n";
 
     outFile.close();
     return true;
@@ -28,6 +29,7 @@ bool SaveSystem::load(SaveData& data, const std::string& filename)
         data.highScore = 0;
         data.highestLevel = 1;
         data.soundOn = true;
+        data.controlMode = 0;
         return false;
     }
 
@@ -42,6 +44,11 @@ bool SaveSystem::load(SaveData& data, const std::string& filename)
     else
     {
         data.soundOn = true;
+    }
+
+    if (!(inFile >> data.controlMode))
+    {
+        data.controlMode = 0;
     }
 
     inFile.close();

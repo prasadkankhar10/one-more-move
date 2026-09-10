@@ -12,10 +12,10 @@ public:
     void init();
     
     // Renders HUD during playing state (top stats + bottom D-pad)
-    void renderPlaying(SDL_Renderer* renderer, int level, int moves, int score, bool soundOn);
+    void renderPlaying(SDL_Renderer* renderer, int level, int moves, int score, bool soundOn, float timeLeft, float timeLimit, int controlMode, int reversedTurns, const std::string& debuffMsg);
 
     // Overlay Screen Renderers
-    void renderMainMenu(SDL_Renderer* renderer, int highScore);
+    void renderMainMenu(SDL_Renderer* renderer, int highScore, int highestLevel, int controlMode);
     void renderPaused(SDL_Renderer* renderer);
     void renderGameOver(SDL_Renderer* renderer, int level, int score, int highScore);
     void renderLevelComplete(SDL_Renderer* renderer, int level, int score, int moves, float time, int stars, int highScore);
@@ -27,6 +27,8 @@ public:
     const Button& getBtnRight() const { return m_btnRight; }
     const Button& getBtnSound() const { return m_btnSound; }
     const Button& getBtnPause() const { return m_btnPause; }
+    const Button& getBtnControls() const { return m_btnControls; }
+    const Button& getBtnExit() const { return m_btnExit; }
 
     // Screen-specific buttons
     Button m_btnPlay;
@@ -34,6 +36,8 @@ public:
     Button m_btnRestart;
     Button m_btnNext;
     Button m_btnMenu; // Back to menu button used on multiple screens
+    Button m_btnExit; // Clean app quit button
+    Button m_btnControls; // Control mode toggle
 
 private:
     // Directional pad buttons

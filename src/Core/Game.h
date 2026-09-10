@@ -47,6 +47,8 @@ private:
     float getLevelTimeLimit() const;
     void triggerGameOver();
     void triggerLevelComplete();
+    void triggerDebuff(DebuffType debuff);
+    void reviseMap();
 
     // SDL Core
     SDL_Window* m_window = nullptr;
@@ -69,6 +71,18 @@ private:
     int m_currentSeed = 0;
     int m_accumulatedScore = 0;
     int m_levelBaseScore = 0;
+    int m_spawnX = 1;
+    int m_spawnY = 1;
+
+    // Debuff State
+    int m_reversedTurns = 0;
+    std::string m_debuffMessage = "";
+    float m_debuffMessageTimer = 0.0f;
+
+    // Touch & Swipe Controls
+    float m_touchStartX = 0.0f;
+    float m_touchStartY = 0.0f;
+    bool m_isSwiping = false;
 
     // Turn control to prevent double-stepping on keyboard
     bool m_keyReleased = true;

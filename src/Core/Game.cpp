@@ -3,6 +3,8 @@
 #include "UI/BitmapFont.h"
 #include <iostream>
 #include <cmath>
+#include <random>
+#include <algorithm>
 
 Game::Game()
 {
@@ -111,12 +113,18 @@ void Game::startNewGame()
     m_particles.clear();
     m_worldSystem.reset();
     m_scoreSystem.resetLevel();
+    m_reversedTurns = 0;
+    m_debuffMessage = "";
+    m_debuffMessageTimer = 0.0f;
+    m_lastTime = SDL_GetTicks();
 
     // Seed randomly
     m_currentSeed = static_cast<int>(SDL_GetTicks());
     int px, py, ex, ey;
     m_board = m_generator.generate(m_currentLevel, m_currentSeed, px, py, ex, ey);
     m_player.reset(px, py);
+    m_spawnX = px;
+    m_spawnY = py;
 
     m_state = GameState::Playing;
 }
@@ -127,11 +135,17 @@ void Game::loadNextLevel()
     m_particles.clear();
     m_worldSystem.reset();
     m_scoreSystem.resetLevel();
+    m_reversedTurns = 0;
+    m_debuffMessage = "";
+    m_debuffMessageTimer = 0.0f;
+    m_lastTime = SDL_GetTicks();
 
     m_currentSeed = static_cast<int>(SDL_GetTicks() + m_currentLevel);
     int px, py, ex, ey;
     m_board = m_generator.generate(m_currentLevel, m_currentSeed, px, py, ex, ey);
     m_player.reset(px, py);
+    m_spawnX = px;
+    m_spawnY = py;
 
     m_state = GameState::Playing;
 }
@@ -139,6 +153,13 @@ void Game::loadNextLevel()
 void Game::handleMovement(int dx, int dy)
 {
     if (m_state != GameState::Playing || !m_player.isAlive()) return;
+
+    // Apply Reversed Controls Debuff
+    if (m_reversedTurns > 0)
+    {
+        dx = -dx;
+        dy = -dy;
+    }
 
     int oldX = m_player.getX();
     int oldY = m_player.getY();
@@ -151,6 +172,43 @@ void Game::handleMovement(int dx, int dy)
         // Turn count increment
         m_scoreSystem.incrementMoves();
         m_audio.playMoveSound();
+
+        // Decrement reversed controls counter on successful move
+        if (m_reversedTurns > 0)
+        {
+            m_reversedTurns--;
+        }
+
+        // Check landing tile BEFORE environment update (for Curse and Defuse)
+        TileType landingTile = m_board.getTileType(m_player.getX(), m_player.getY());
+        if (landingTile == TileType::Curse)
+        {
+            DebuffType debuff = m_board.getDebuffType(m_player.getX(), m_player.getY());
+            triggerDebuff(debuff);
+            m_board.setTileType(m_player.getX(), m_player.getY(), TileType::Empty);
+        }
+        else if (landingTile == TileType::Defuse)
+        {
+            // Clear all debuffs
+            m_reversedTurns = 0;
+            m_debuffMessage = "! HAZARDS DEFUSED !";
+            m_debuffMessageTimer = 2.5f;
+            m_audio.playWinSound();
+
+            // Disarm any adjacent danger tiles
+            for (int ny = m_player.getY() - 1; ny <= m_player.getY() + 1; ++ny)
+            {
+                for (int nx = m_player.getX() - 1; nx <= m_player.getX() + 1; ++nx)
+                {
+                    if (m_board.isValidPosition(nx, ny) && m_board.getTileType(nx, ny) == TileType::Danger)
+                    {
+                        m_board.setTileType(nx, ny, TileType::Empty);
+                        spawnExplosion(nx * 40.0f, ny * 40.0f, { 56, 178, 172, 255 });
+                    }
+                }
+            }
+            m_board.setTileType(m_player.getX(), m_player.getY(), TileType::Empty);
+        }
 
         // Update environment turn
         int exitX = -1, exitY = -1;
@@ -177,13 +235,13 @@ void Game::handleMovement(int dx, int dy)
             m_worldSystem.triggerSuddenDeathCollapse(m_board, m_player.getX(), m_player.getY(), exitX, exitY, m_audio);
         }
 
-        // Check death or win immediately after updating tiles
-        TileType landingTile = m_board.getTileType(m_player.getX(), m_player.getY());
-        if (landingTile == TileType::Danger)
+        // Re-check death or win after world hazards update
+        TileType currentTile = m_board.getTileType(m_player.getX(), m_player.getY());
+        if (currentTile == TileType::Danger)
         {
             triggerGameOver();
         }
-        else if (landingTile == TileType::Exit)
+        else if (currentTile == TileType::Exit)
         {
             triggerLevelComplete();
         }
@@ -192,6 +250,116 @@ void Game::handleMovement(int dx, int dy)
     {
         // Blocked movement
         m_audio.playInvalidMoveSound();
+    }
+}
+
+void Game::triggerDebuff(DebuffType debuff)
+{
+    m_audio.playWarningSound();
+    m_shakeTime = 0.4f;
+    m_shakeMagnitude = 9.0f;
+
+    switch (debuff)
+    {
+        case DebuffType::ReverseControls:
+            m_reversedTurns = 4;
+            m_debuffMessage = "! CONTROLS REVERSED (4 MOVES) !";
+            m_debuffMessageTimer = 3.0f;
+            break;
+
+        case DebuffType::TeleportSpawn:
+            m_player.reset(m_spawnX, m_spawnY);
+            m_debuffMessage = "! TELEPORTED TO SPAWN !";
+            m_debuffMessageTimer = 3.0f;
+            break;
+
+        case DebuffType::ReviseMap:
+            reviseMap();
+            m_debuffMessage = "! MAP RESHUFFLED !";
+            m_debuffMessageTimer = 3.0f;
+            break;
+
+        case DebuffType::TimePenalty:
+            m_scoreSystem.updateTime(10.0f); // Adds 10s to elapsed time = 10s penalty
+            m_debuffMessage = "! -10s TIME PENALTY !";
+            m_debuffMessageTimer = 3.0f;
+            break;
+
+        case DebuffType::None:
+            break;
+    }
+}
+
+void Game::reviseMap()
+{
+    int exitX = -1, exitY = -1;
+    for (int y = 0; y < m_board.getHeight(); ++y)
+    {
+        for (int x = 0; x < m_board.getWidth(); ++x)
+        {
+            if (m_board.getTileType(x, y) == TileType::Exit)
+            {
+                exitX = x;
+                exitY = y;
+                break;
+            }
+        }
+    }
+
+    std::vector<std::pair<int, int>> positions;
+    std::vector<TileType> tileTypes;
+    for (int y = 1; y < m_board.getHeight() - 1; ++y)
+    {
+        for (int x = 1; x < m_board.getWidth() - 1; ++x)
+        {
+            if ((x == m_player.getX() && y == m_player.getY()) || (x == exitX && y == exitY))
+            {
+                continue;
+            }
+            TileType t = m_board.getTileType(x, y);
+            if (t == TileType::Wall || t == TileType::Empty || t == TileType::Danger)
+            {
+                positions.push_back({x, y});
+                tileTypes.push_back(t);
+            }
+        }
+    }
+
+    if (positions.empty()) return;
+
+    std::mt19937 rng(static_cast<unsigned int>(SDL_GetTicks()));
+    for (int attempt = 0; attempt < 25; ++attempt)
+    {
+        std::shuffle(tileTypes.begin(), tileTypes.end(), rng);
+        for (size_t i = 0; i < positions.size(); ++i)
+        {
+            m_board.setTileType(positions[i].first, positions[i].second, tileTypes[i]);
+        }
+
+        if (m_board.hasPath(m_player.getX(), m_player.getY(), exitX, exitY))
+        {
+            return;
+        }
+    }
+
+    // Fallback: carve guaranteed clear corridor if shuffles fail
+    int cx = m_player.getX();
+    int cy = m_player.getY();
+    while (cx != exitX)
+    {
+        cx += (exitX > cx) ? 1 : -1;
+        if (m_board.getTileType(cx, cy) == TileType::Wall)
+        {
+            m_board.setTileType(cx, cy, TileType::Empty);
+        }
+    }
+    while (cy != exitY)
+    {
+        cy += (exitY > cy) ? 1 : -1;
+        if (m_board.getTileType(cx, cy) == TileType::Wall)
+        {
+            m_board.setTileType(cx, cy, TileType::Empty);
+        }
     }
 }
 
@@ -306,10 +474,26 @@ void Game::handleMouseClick(float mx, float my)
                 m_audio.playMoveSound();
                 startNewGame();
             }
+            else if (m_hud.getBtnControls().checkClick(mx, my))
+            {
+                m_saveData.controlMode = (m_saveData.controlMode + 1) % 3;
+                SaveSystem::save(m_saveData, m_saveFilePath);
+                m_audio.playMoveSound();
+            }
+            else if (m_hud.getBtnExit().checkClick(mx, my))
+            {
+                m_running = false;
+            }
             break;
 
         case GameState::Playing:
-            if (m_hud.getBtnPause().checkClick(mx, my))
+            if (m_hud.getBtnControls().checkClick(mx, my))
+            {
+                m_saveData.controlMode = (m_saveData.controlMode + 1) % 3;
+                SaveSystem::save(m_saveData, m_saveFilePath);
+                m_audio.playMoveSound();
+            }
+            else if (m_hud.getBtnPause().checkClick(mx, my))
             {
                 m_audio.playMoveSound();
                 m_state = GameState::Paused;
@@ -320,22 +504,25 @@ void Game::handleMouseClick(float mx, float my)
                 m_saveData.soundOn = m_audio.isSoundOn();
                 SaveSystem::save(m_saveData, m_saveFilePath);
             }
-            // D-Pad checks
-            else if (m_hud.getBtnUp().checkClick(mx, my))
+            // D-Pad checks (Only enabled if controlMode is Both or DPadOnly)
+            else if (m_saveData.controlMode != 1)
             {
-                handleMovement(0, -1);
-            }
-            else if (m_hud.getBtnDown().checkClick(mx, my))
-            {
-                handleMovement(0, 1);
-            }
-            else if (m_hud.getBtnLeft().checkClick(mx, my))
-            {
-                handleMovement(-1, 0);
-            }
-            else if (m_hud.getBtnRight().checkClick(mx, my))
-            {
-                handleMovement(1, 0);
+                if (m_hud.getBtnUp().checkClick(mx, my))
+                {
+                    handleMovement(0, -1);
+                }
+                else if (m_hud.getBtnDown().checkClick(mx, my))
+                {
+                    handleMovement(0, 1);
+                }
+                else if (m_hud.getBtnLeft().checkClick(mx, my))
+                {
+                    handleMovement(-1, 0);
+                }
+                else if (m_hud.getBtnRight().checkClick(mx, my))
+                {
+                    handleMovement(1, 0);
+                }
             }
             break;
 
@@ -349,6 +536,10 @@ void Game::handleMouseClick(float mx, float my)
             {
                 m_audio.playMoveSound();
                 m_state = GameState::MainMenu;
+            }
+            else if (m_hud.getBtnExit().checkClick(mx, my))
+            {
+                m_running = false;
             }
             break;
 
@@ -374,7 +565,7 @@ void Game::handleMouseClick(float mx, float my)
             else if (m_hud.m_btnRestart.checkClick(mx, my))
             {
                 m_audio.playMoveSound();
-                // Restart same level (decrement to reload same level index)
+                // Restart same level
                 m_currentLevel--;
                 loadNextLevel();
             }
@@ -411,7 +602,47 @@ void Game::processInput()
             float rx = 0.0f, ry = 0.0f;
             if (SDL_RenderCoordinatesFromWindow(m_renderer, wx, wy, &rx, &ry))
             {
-                handleMouseClick(rx, ry);
+                m_touchStartX = rx;
+                m_touchStartY = ry;
+                m_isSwiping = true;
+            }
+        }
+        else if (event.type == SDL_EVENT_FINGER_UP)
+        {
+            if (m_isSwiping)
+            {
+                m_isSwiping = false;
+                int winW = 0, winH = 0;
+                SDL_GetWindowSize(m_window, &winW, &winH);
+
+                float wx = event.tfinger.x * static_cast<float>(winW);
+                float wy = event.tfinger.y * static_cast<float>(winH);
+
+                float rx = 0.0f, ry = 0.0f;
+                if (SDL_RenderCoordinatesFromWindow(m_renderer, wx, wy, &rx, &ry))
+                {
+                    float deltaX = rx - m_touchStartX;
+                    float deltaY = ry - m_touchStartY;
+                    float distSq = deltaX * deltaX + deltaY * deltaY;
+
+                    // Swipe threshold: 30 pixels (900 px squared)
+                    if (distSq >= 900.0f && m_state == GameState::Playing && (m_saveData.controlMode == 0 || m_saveData.controlMode == 1))
+                    {
+                        if (std::abs(deltaX) > std::abs(deltaY))
+                        {
+                            handleMovement((deltaX > 0.0f) ? 1 : -1, 0);
+                        }
+                        else
+                        {
+                            handleMovement(0, (deltaY > 0.0f) ? 1 : -1);
+                        }
+                    }
+                    else
+                    {
+                        // Process as button tap / click
+                        handleMouseClick(rx, ry);
+                    }
+                }
             }
         }
         else if (event.type == SDL_EVENT_KEY_UP)
@@ -479,6 +710,16 @@ void Game::update(float deltaTime)
     {
         m_shakeTime -= deltaTime;
         if (m_shakeTime < 0.0f) m_shakeTime = 0.0f;
+    }
+
+    // Update debuff message timer
+    if (m_debuffMessageTimer > 0.0f)
+    {
+        m_debuffMessageTimer -= deltaTime;
+        if (m_debuffMessageTimer <= 0.0f)
+        {
+            m_debuffMessage = "";
+        }
     }
 
     // Update and filter explosion particles
@@ -557,68 +798,18 @@ void Game::render()
     switch (m_state)
     {
         case GameState::MainMenu:
-            m_hud.renderMainMenu(m_renderer, m_saveData.highScore);
+            m_hud.renderMainMenu(m_renderer, m_saveData.highScore, m_saveData.highestLevel, m_saveData.controlMode);
             break;
         case GameState::Playing:
-            m_hud.renderPlaying(m_renderer, m_currentLevel, m_scoreSystem.getMoves(), m_accumulatedScore + m_scoreSystem.calculateScore(m_currentLevel, 0.15f), m_audio.isSoundOn());
-            
-            // Draw Timer HUD
             {
                 float limit = getLevelTimeLimit();
                 float elapsed = m_scoreSystem.getTime();
                 float timeLeft = limit - elapsed;
 
-                if (timeLeft > 0.0f)
-                {
-                    // Format text
-                    char timeStr[32];
-                    sprintf(timeStr, "TIME LEFT: %.1fs", timeLeft);
-                    
-                    // Draw centered time text
-                    float scale = 1.5f;
-                    float textWidth = strlen(timeStr) * 8.0f * scale;
-                    float tx = (Constants::SCREEN_WIDTH - textWidth) / 2.0f;
-                    BitmapFont::drawText(m_renderer, timeStr, tx, 80.0f, scale, { 255, 255, 255, 255 });
-
-                    // Draw Timer progress bar
-                    float barW = 200.0f;
-                    float barH = 6.0f;
-                    float bx = (Constants::SCREEN_WIDTH - barW) / 2.0f;
-                    float by = 100.0f;
-
-                    // Background bar (dark grey)
-                    SDL_FRect bgBar = { bx, by, barW, barH };
-                    SDL_SetRenderDrawColor(m_renderer, 0x2d, 0x35, 0x48, 0xff);
-                    SDL_RenderFillRect(m_renderer, &bgBar);
-
-                    // Fill bar (green, turns flashing red when low)
-                    float percentage = timeLeft / limit;
-                    SDL_FRect fillBar = { bx, by, barW * percentage, barH };
-                    
-                    if (percentage > 0.3f)
-                    {
-                        SDL_SetRenderDrawColor(m_renderer, 72, 187, 120, 255); // Green
-                    }
-                    else
-                    {
-                        // Flashing red
-                        Uint8 alpha = (SDL_GetTicks() % 250 < 125) ? 150 : 255;
-                        SDL_SetRenderDrawColor(m_renderer, 245, 101, 101, alpha);
-                    }
-                    SDL_RenderFillRect(m_renderer, &fillBar);
-                }
-                else
-                {
-                    // Sudden Death Warning text
-                    const char* warnText = "!! SUDDEN DEATH !!";
-                    float scale = 1.8f;
-                    float textWidth = strlen(warnText) * 8.0f * scale;
-                    float tx = (Constants::SCREEN_WIDTH - textWidth) / 2.0f;
-                    
-                    // Flashing red/yellow text
-                    SDL_Color flashColor = (SDL_GetTicks() % 400 < 200) ? SDL_Color{ 245, 101, 101, 255 } : SDL_Color{ 246, 224, 94, 255 };
-                    BitmapFont::drawText(m_renderer, warnText, tx, 80.0f, scale, flashColor);
-                }
+                m_hud.renderPlaying(m_renderer, m_currentLevel, m_scoreSystem.getMoves(),
+                                    m_accumulatedScore + m_scoreSystem.calculateScore(m_currentLevel, 0.15f),
+                                    m_audio.isSoundOn(), timeLeft, limit, m_saveData.controlMode,
+                                    m_reversedTurns, m_debuffMessage);
             }
             break;
         case GameState::Paused:

@@ -96,6 +96,53 @@ Board LevelGenerator::generate(int level, int seed, int& outPlayerX, int& outPla
         // Run BFS path verification
         if (board.hasPath(outPlayerX, outPlayerY, outExitX, outExitY))
         {
+            // Collect empty interior tiles (excluding player spawn and exit)
+            std::vector<std::pair<int, int>> emptyTiles;
+            for (int y = 1; y < rows - 1; ++y)
+            {
+                for (int x = 1; x < cols - 1; ++x)
+                {
+                    if (board.getTileType(x, y) == TileType::Empty &&
+                        !(x == outPlayerX && y == outPlayerY) &&
+                        !(x == outExitX && y == outExitY))
+                    {
+                        emptyTiles.push_back({x, y});
+                    }
+                }
+            }
+
+            // Spawn Curse/Debuff tiles (Level 2+, 1 to 3 tiles)
+            if (level >= 2 && !emptyTiles.empty())
+            {
+                std::shuffle(emptyTiles.begin(), emptyTiles.end(), rng);
+                int curseCount = std::min(static_cast<int>(emptyTiles.size()), std::min(1 + (level / 4), 3));
+                
+                DebuffType debuffs[] = {
+                    DebuffType::ReverseControls,
+                    DebuffType::TeleportSpawn,
+                    DebuffType::ReviseMap,
+                    DebuffType::TimePenalty
+                };
+
+                for (int i = 0; i < curseCount && !emptyTiles.empty(); ++i)
+                {
+                    auto [cx, cy] = emptyTiles.back();
+                    emptyTiles.pop_back();
+
+                    board.setTileType(cx, cy, TileType::Curse);
+                    DebuffType chosenDebuff = debuffs[rng() % 4];
+                    board.setDebuffType(cx, cy, chosenDebuff);
+                }
+
+                // Spawn 1 Defuse tile on Level 3+
+                if (level >= 3 && !emptyTiles.empty())
+                {
+                    auto [dx, dy] = emptyTiles.back();
+                    emptyTiles.pop_back();
+                    board.setTileType(dx, dy, TileType::Defuse);
+                }
+            }
+
             std::cout << "[Generator] Successfully generated solvable level " << level 
                       << " with seed " << seed << " in " << attempts << " attempts." << std::endl;
             return board;

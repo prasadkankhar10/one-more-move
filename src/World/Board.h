@@ -16,6 +16,10 @@ public:
     bool isValidPosition(int x, int y) const;
     TileType getTileType(int x, int y) const;
     void setTileType(int x, int y, TileType type);
+    DebuffType getDebuffType(int x, int y) const;
+    void setDebuffType(int x, int y, DebuffType debuff);
+    const Tile& getTile(int x, int y) const;
+    void setTile(int x, int y, const Tile& tile);
     bool hasPath(int startX, int startY, int targetX, int targetY) const;
 
     int getWidth() const { return m_width; }

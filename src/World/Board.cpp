@@ -50,6 +50,41 @@ void Board::setTileType(int x, int y, TileType type)
     }
 }
 
+DebuffType Board::getDebuffType(int x, int y) const
+{
+    if (isValidPosition(x, y))
+    {
+        return m_grid[y][x].debuff;
+    }
+    return DebuffType::None;
+}
+
+void Board::setDebuffType(int x, int y, DebuffType debuff)
+{
+    if (isValidPosition(x, y))
+    {
+        m_grid[y][x].debuff = debuff;
+    }
+}
+
+const Tile& Board::getTile(int x, int y) const
+{
+    static const Tile defaultWall{ TileType::Wall, true, DebuffType::None };
+    if (isValidPosition(x, y))
+    {
+        return m_grid[y][x];
+    }
+    return defaultWall;
+}
+
+void Board::setTile(int x, int y, const Tile& tile)
+{
+    if (isValidPosition(x, y))
+    {
+        m_grid[y][x] = tile;
+    }
+}
+
 SDL_FRect Board::getTileRect(int x, int y) const
 {
     SDL_FRect rect;
@@ -89,6 +124,12 @@ void Board::render(SDL_Renderer* renderer, float offsetX, float offsetY)
                 case TileType::Trap:
                     SDL_SetRenderDrawColor(renderer, 0xed, 0x89, 0x36, 0xff); // Orange
                     break;
+                case TileType::Curse:
+                    SDL_SetRenderDrawColor(renderer, 0x80, 0x1f, 0x99, 0xff); // Deep purple
+                    break;
+                case TileType::Defuse:
+                    SDL_SetRenderDrawColor(renderer, 0x23, 0x7a, 0x79, 0xff); // Deep cyan/teal
+                    break;
             }
 
             SDL_RenderFillRect(renderer, &rect);
@@ -98,6 +139,40 @@ void Board::render(SDL_Renderer* renderer, float offsetX, float offsetY)
             {
                 SDL_SetRenderDrawColor(renderer, 0x3a, 0x45, 0x5c, 0xff);
                 SDL_RenderRect(renderer, &rect);
+            }
+            // Draw special markings for Curse and Defuse
+            else if (m_grid[y][x].type == TileType::Curse)
+            {
+                // Pulsing bright magenta inner diamond/box
+                float pulse = 0.5f + 0.5f * std::sin(SDL_GetTicks() / 150.0f);
+                SDL_FRect inner = rect;
+                float pad = 8.0f - (pulse * 2.0f);
+                inner.x += pad;
+                inner.y += pad;
+                inner.w -= pad * 2.0f;
+                inner.h -= pad * 2.0f;
+                SDL_SetRenderDrawColor(renderer, 0xd5, 0x3f, 0x8c, 0xff); // Bright magenta
+                SDL_RenderFillRect(renderer, &inner);
+            }
+            else if (m_grid[y][x].type == TileType::Defuse)
+            {
+                // Bright cyan cross icon
+                SDL_FRect centerBox = rect;
+                centerBox.x += 6.0f;
+                centerBox.y += 6.0f;
+                centerBox.w -= 12.0f;
+                centerBox.h -= 12.0f;
+                SDL_SetRenderDrawColor(renderer, 0x38, 0xb2, 0xac, 0xff); // Bright cyan
+                SDL_RenderFillRect(renderer, &centerBox);
+
+                // White inner dot
+                SDL_FRect dot = rect;
+                dot.x += 14.0f;
+                dot.y += 14.0f;
+                dot.w -= 28.0f;
+                dot.h -= 28.0f;
+                SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xff);
+                SDL_RenderFillRect(renderer, &dot);
             }
         }
     }

@@ -7,6 +7,7 @@ struct SaveData
     int highScore = 0;
     int highestLevel = 1;
     bool soundOn = true;
+    int controlMode = 0; // 0 = Both, 1 = Swipe Only, 2 = D-Pad Only
 };
 
 class SaveSystem

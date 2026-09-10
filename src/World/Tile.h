@@ -6,11 +6,23 @@ enum class TileType
     Wall,
     Exit,
     Danger,
-    Trap
+    Trap,
+    Curse,
+    Defuse
+};
+
+enum class DebuffType
+{
+    None,
+    ReverseControls,
+    TeleportSpawn,
+    ReviseMap,
+    TimePenalty
 };
 
 struct Tile
 {
     TileType type = TileType::Empty;
     bool active = true;
+    DebuffType debuff = DebuffType::None;
 };
