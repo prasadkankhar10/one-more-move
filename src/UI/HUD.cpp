@@ -216,7 +216,7 @@ void HUD::renderPaused(SDL_Renderer* renderer)
     m_btnExit.render(renderer, { 150, 45, 45, 255 }); // Dark Red Exit
 }
 
-void HUD::renderGameOver(SDL_Renderer* renderer, int level, int score, int highScore)
+void HUD::renderGameOver(SDL_Renderer* renderer, int level, int score, int highScore, bool timedOut)
 {
     // Dark transparent overlay
     SDL_FRect overlay = { 0.0f, 0.0f, static_cast<float>(Constants::SCREEN_WIDTH), static_cast<float>(Constants::SCREEN_HEIGHT) };
@@ -224,13 +224,29 @@ void HUD::renderGameOver(SDL_Renderer* renderer, int level, int score, int highS
     SDL_SetRenderDrawColor(renderer, 0x1d, 0x13, 0x13, 0xdf); // Dark Red-tinted overlay
     SDL_RenderFillRect(renderer, &overlay);
 
-    BitmapFont::drawText(renderer, "GAME OVER", 125.0f, 180.0f, 3.2f, { 245, 101, 101, 255 }); // Red
+    if (timedOut)
+    {
+        std::string title = "TIME'S UP!";
+        float tw = title.length() * 8.0f * 3.2f;
+        float tx = (Constants::SCREEN_WIDTH - tw) / 2.0f;
+        BitmapFont::drawText(renderer, title, tx, 180.0f, 3.2f, { 245, 101, 101, 255 }); // Red
 
-    std::stringstream lvlSS;
-    lvlSS << "FAILED LEVEL " << level;
-    float textWidth = lvlSS.str().length() * 8.0f * 1.8f;
-    float tx = (Constants::SCREEN_WIDTH - textWidth) / 2.0f;
-    BitmapFont::drawText(renderer, lvlSS.str(), tx, 240.0f, 1.8f, { 255, 255, 255, 255 });
+        std::stringstream lvlSS;
+        lvlSS << "OUT OF TIME ON LEVEL " << level;
+        float subTw = lvlSS.str().length() * 8.0f * 1.8f;
+        float subTx = (Constants::SCREEN_WIDTH - subTw) / 2.0f;
+        BitmapFont::drawText(renderer, lvlSS.str(), subTx, 240.0f, 1.8f, { 246, 224, 94, 255 }); // Gold
+    }
+    else
+    {
+        BitmapFont::drawText(renderer, "GAME OVER", 125.0f, 180.0f, 3.2f, { 245, 101, 101, 255 }); // Red
+
+        std::stringstream lvlSS;
+        lvlSS << "FAILED LEVEL " << level;
+        float textWidth = lvlSS.str().length() * 8.0f * 1.8f;
+        float tx = (Constants::SCREEN_WIDTH - textWidth) / 2.0f;
+        BitmapFont::drawText(renderer, lvlSS.str(), tx, 240.0f, 1.8f, { 255, 255, 255, 255 });
+    }
 
     std::stringstream ss;
     ss << "Score: " << score;

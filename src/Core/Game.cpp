@@ -116,6 +116,7 @@ void Game::startNewGame()
     m_reversedTurns = 0;
     m_debuffMessage = "";
     m_debuffMessageTimer = 0.0f;
+    m_timedOut = false;
     m_lastTime = SDL_GetTicks();
 
     // Seed randomly
@@ -138,6 +139,7 @@ void Game::loadNextLevel()
     m_reversedTurns = 0;
     m_debuffMessage = "";
     m_debuffMessageTimer = 0.0f;
+    m_timedOut = false;
     m_lastTime = SDL_GetTicks();
 
     m_currentSeed = static_cast<int>(SDL_GetTicks() + m_currentLevel);
@@ -239,6 +241,7 @@ void Game::handleMovement(int dx, int dy)
         TileType currentTile = m_board.getTileType(m_player.getX(), m_player.getY());
         if (currentTile == TileType::Danger)
         {
+            m_timedOut = false;
             triggerGameOver();
         }
         else if (currentTile == TileType::Exit)
@@ -744,6 +747,13 @@ void Game::update(float deltaTime)
     {
         m_player.update(deltaTime);
         m_scoreSystem.updateTime(deltaTime);
+
+        // Fail level immediately if level countdown timer hits zero!
+        if (m_scoreSystem.getTime() >= getLevelTimeLimit())
+        {
+            m_timedOut = true;
+            triggerGameOver();
+        }
     }
 }
 
@@ -819,7 +829,7 @@ void Game::render()
             {
                 float density = 0.12f + std::min(m_currentLevel * 0.015f, 0.18f);
                 int score = m_accumulatedScore + m_scoreSystem.calculateScore(m_currentLevel, density);
-                m_hud.renderGameOver(m_renderer, m_currentLevel, score, m_saveData.highScore);
+                m_hud.renderGameOver(m_renderer, m_currentLevel, score, m_saveData.highScore, m_timedOut);
             }
             break;
         case GameState::LevelComplete:

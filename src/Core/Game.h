@@ -78,6 +78,7 @@ private:
     int m_reversedTurns = 0;
     std::string m_debuffMessage = "";
     float m_debuffMessageTimer = 0.0f;
+    bool m_timedOut = false;
 
     // Touch & Swipe Controls
     float m_touchStartX = 0.0f;

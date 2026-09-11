@@ -17,7 +17,7 @@ public:
     // Overlay Screen Renderers
     void renderMainMenu(SDL_Renderer* renderer, int highScore, int highestLevel, int controlMode);
     void renderPaused(SDL_Renderer* renderer);
-    void renderGameOver(SDL_Renderer* renderer, int level, int score, int highScore);
+    void renderGameOver(SDL_Renderer* renderer, int level, int score, int highScore, bool timedOut = false);
     void renderLevelComplete(SDL_Renderer* renderer, int level, int score, int moves, float time, int stars, int highScore);
 
     // Getters for touch buttons (so Game class can check tap inputs)
