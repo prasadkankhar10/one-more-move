@@ -75,11 +75,11 @@ void HUD::renderPlaying(SDL_Renderer* renderer, int level, int moves, int score,
 
     std::stringstream ss;
     ss << "L:" << level;
-    BitmapFont::drawText(renderer, ss.str(), 168.0f, 20.0f, 1.4f, { 255, 255, 255, 255 });
+    BitmapFont::drawText(renderer, ss.str(), 168.0f, 19.0f, 1.5f, { 255, 255, 255, 255 });
 
     ss.str("");
     ss << "M:" << moves;
-    BitmapFont::drawText(renderer, ss.str(), 215.0f, 20.0f, 1.4f, { 255, 255, 255, 255 });
+    BitmapFont::drawText(renderer, ss.str(), 218.0f, 19.0f, 1.5f, { 255, 255, 255, 255 });
 
     // Inventory indicators in Row 1
     float badgeX = 280.0f;
@@ -88,7 +88,7 @@ void HUD::renderPlaying(SDL_Renderer* renderer, int level, int moves, int score,
         SDL_FRect sBadge = { badgeX, 16.0f, 48.0f, 22.0f };
         SDL_SetRenderDrawColor(renderer, 0x2b, 0x6c, 0xb0, 0xff);
         SDL_RenderFillRect(renderer, &sBadge);
-        BitmapFont::drawText(renderer, "SHLD", badgeX + 4.0f, 19.0f, 1.1f, { 255, 255, 255, 255 });
+        BitmapFont::drawText(renderer, "SHLD", badgeX + 4.0f, 18.0f, 1.2f, { 255, 255, 255, 255 });
         badgeX += 52.0f;
     }
     if (hasKey)
@@ -96,7 +96,7 @@ void HUD::renderPlaying(SDL_Renderer* renderer, int level, int moves, int score,
         SDL_FRect kBadge = { badgeX, 16.0f, 38.0f, 22.0f };
         SDL_SetRenderDrawColor(renderer, 0xd6, 0x9e, 0x2e, 0xff);
         SDL_RenderFillRect(renderer, &kBadge);
-        BitmapFont::drawText(renderer, "KEY", badgeX + 4.0f, 19.0f, 1.1f, { 255, 255, 255, 255 });
+        BitmapFont::drawText(renderer, "KEY", badgeX + 4.0f, 18.0f, 1.2f, { 255, 255, 255, 255 });
         badgeX += 42.0f;
     }
 
@@ -113,7 +113,7 @@ void HUD::renderPlaying(SDL_Renderer* renderer, int level, int moves, int score,
 
     ss.str("");
     ss << "PTS: " << score;
-    BitmapFont::drawText(renderer, ss.str(), 95.0f, 54.0f, 1.4f, { 104, 219, 120, 255 }); // Green score
+    BitmapFont::drawText(renderer, ss.str(), 95.0f, 54.0f, 1.5f, { 104, 219, 120, 255 }); // Green score
 
     // Time text & progress bar
     if (timeLeft < 0.0f) timeLeft = 0.0f;
@@ -130,10 +130,10 @@ void HUD::renderPlaying(SDL_Renderer* renderer, int level, int moves, int score,
     bool isLowTime = (timeLeft < 5.0f && freezeTime <= 0.0f);
     SDL_Color timeColor = (freezeTime > 0.0f) ? SDL_Color{ 100, 220, 255, 255 } : 
                          (isLowTime ? SDL_Color{ 245, 101, 101, 255 } : SDL_Color{ 246, 224, 94, 255 });
-    BitmapFont::drawText(renderer, timeBuffer, 220.0f, 54.0f, 1.3f, timeColor);
+    BitmapFont::drawText(renderer, timeBuffer, 222.0f, 54.0f, 1.4f, timeColor);
 
     // Time Progress Bar
-    float barX = 290.0f;
+    float barX = 295.0f;
     float barY = 56.0f;
     float barW = 85.0f;
     float barH = 10.0f;
@@ -170,9 +170,9 @@ void HUD::renderPlaying(SDL_Renderer* renderer, int level, int moves, int score,
         SDL_RenderFillRect(renderer, &debuffBar);
 
         std::string revText = "! CONTROLS REVERSED: " + std::to_string(reversedTurns) + " !";
-        float tw = revText.length() * 8.0f * 1.4f;
+        float tw = BitmapFont::getTextWidth(revText, 1.5f);
         float tx = (Constants::SCREEN_WIDTH - tw) / 2.0f;
-        BitmapFont::drawText(renderer, revText, tx, 92.0f, 1.4f, { 255, 255, 255, 255 });
+        BitmapFont::drawText(renderer, revText, tx, 92.0f, 1.5f, { 255, 255, 255, 255 });
     }
     else if (!debuffMsg.empty())
     {
@@ -180,9 +180,9 @@ void HUD::renderPlaying(SDL_Renderer* renderer, int level, int moves, int score,
         SDL_SetRenderDrawColor(renderer, 0xc5, 0x30, 0x30, 0xdf); // Alert Red
         SDL_RenderFillRect(renderer, &debuffBar);
 
-        float tw = debuffMsg.length() * 8.0f * 1.4f;
+        float tw = BitmapFont::getTextWidth(debuffMsg, 1.5f);
         float tx = (Constants::SCREEN_WIDTH - tw) / 2.0f;
-        BitmapFont::drawText(renderer, debuffMsg, tx, 92.0f, 1.4f, { 255, 255, 255, 255 });
+        BitmapFont::drawText(renderer, debuffMsg, tx, 92.0f, 1.5f, { 255, 255, 255, 255 });
     }
 
     // Render D-Pad ONLY if controlMode allows it (0: Both, 2: D-Pad Only)
@@ -199,8 +199,8 @@ void HUD::renderMainMenu(SDL_Renderer* renderer, int highScore, int highestLevel
 {
     // Draw Title: ONE MORE MOVE with shadow
     std::string title = "ONE MORE MOVE";
-    float scale = 3.0f;
-    float titleWidth = title.length() * 8.0f * scale;
+    float scale = 3.2f;
+    float titleWidth = BitmapFont::getTextWidth(title, scale);
     float titleX = (Constants::SCREEN_WIDTH - titleWidth) / 2.0f;
 
     // Drop shadow
@@ -210,12 +210,13 @@ void HUD::renderMainMenu(SDL_Renderer* renderer, int highScore, int highestLevel
 
     // Subtitle
     std::string sub = "TACTICAL ESCAPE";
-    float subWidth = sub.length() * 8.0f * 1.5f;
+    float subScale = 1.6f;
+    float subWidth = BitmapFont::getTextWidth(sub, subScale);
     float subX = (Constants::SCREEN_WIDTH - subWidth) / 2.0f;
-    BitmapFont::drawText(renderer, sub, subX, 175.0f, 1.5f, { 160, 174, 192, 255 });
+    BitmapFont::drawText(renderer, sub, subX, 175.0f, subScale, { 160, 174, 192, 255 });
 
     // Stats Card
-    SDL_FRect statCard = { 55.0f, 215.0f, 340.0f, 115.0f };
+    SDL_FRect statCard = { 45.0f, 215.0f, 360.0f, 115.0f };
     SDL_SetRenderDrawColor(renderer, 0x16, 0x1a, 0x24, 0xff);
     SDL_RenderFillRect(renderer, &statCard);
     SDL_SetRenderDrawColor(renderer, 0x2d, 0x35, 0x48, 0xff);
@@ -223,13 +224,13 @@ void HUD::renderMainMenu(SDL_Renderer* renderer, int highScore, int highestLevel
 
     std::stringstream ss;
     ss << "UNLOCKED LEVEL: " << highestLevel;
-    float sw1 = ss.str().length() * 8.0f * 1.6f;
-    BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - sw1) / 2.0f, 240.0f, 1.6f, { 255, 255, 255, 255 });
+    float sw1 = BitmapFont::getTextWidth(ss.str(), 1.7f);
+    BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - sw1) / 2.0f, 240.0f, 1.7f, { 255, 255, 255, 255 });
 
     ss.str("");
     ss << "BEST SCORE: " << highScore;
-    float sw2 = ss.str().length() * 8.0f * 1.8f;
-    BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - sw2) / 2.0f, 280.0f, 1.8f, { 104, 219, 120, 255 });
+    float sw2 = BitmapFont::getTextWidth(ss.str(), 1.9f);
+    BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - sw2) / 2.0f, 280.0f, 1.9f, { 104, 219, 120, 255 });
 
     // Menu Buttons
     m_btnPlay.setPosition(85.0f, 365.0f);
@@ -261,7 +262,9 @@ void HUD::renderPaused(SDL_Renderer* renderer)
     SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xd8); // Dark overlay
     SDL_RenderFillRect(renderer, &overlay);
 
-    BitmapFont::drawText(renderer, "GAME PAUSED", 110.0f, 180.0f, 2.5f, { 255, 255, 255, 255 });
+    std::string pTitle = "GAME PAUSED";
+    float pw = BitmapFont::getTextWidth(pTitle, 2.6f);
+    BitmapFont::drawText(renderer, pTitle, (Constants::SCREEN_WIDTH - pw) / 2.0f, 180.0f, 2.6f, { 255, 255, 255, 255 });
 
     m_btnResume.setPosition(85.0f, 240.0f);
     m_btnResume.setSize(280.0f, 48.0f);
@@ -300,34 +303,39 @@ void HUD::renderGameOver(SDL_Renderer* renderer, int level, int score, int highS
     if (timedOut)
     {
         std::string title = "TIME'S UP!";
-        float tw = title.length() * 8.0f * 3.2f;
+        float tw = BitmapFont::getTextWidth(title, 3.2f);
         float tx = (Constants::SCREEN_WIDTH - tw) / 2.0f;
         BitmapFont::drawText(renderer, title, tx, 180.0f, 3.2f, { 245, 101, 101, 255 }); // Red
 
         std::stringstream lvlSS;
         lvlSS << "OUT OF TIME ON LEVEL " << level;
-        float subTw = lvlSS.str().length() * 8.0f * 1.8f;
+        float subTw = BitmapFont::getTextWidth(lvlSS.str(), 1.8f);
         float subTx = (Constants::SCREEN_WIDTH - subTw) / 2.0f;
         BitmapFont::drawText(renderer, lvlSS.str(), subTx, 240.0f, 1.8f, { 246, 224, 94, 255 }); // Gold
     }
     else
     {
-        BitmapFont::drawText(renderer, "GAME OVER", 125.0f, 180.0f, 3.2f, { 245, 101, 101, 255 }); // Red
+        std::string title = "GAME OVER";
+        float tw = BitmapFont::getTextWidth(title, 3.2f);
+        float tx = (Constants::SCREEN_WIDTH - tw) / 2.0f;
+        BitmapFont::drawText(renderer, title, tx, 180.0f, 3.2f, { 245, 101, 101, 255 }); // Red
 
         std::stringstream lvlSS;
         lvlSS << "FAILED LEVEL " << level;
-        float textWidth = lvlSS.str().length() * 8.0f * 1.8f;
-        float tx = (Constants::SCREEN_WIDTH - textWidth) / 2.0f;
-        BitmapFont::drawText(renderer, lvlSS.str(), tx, 240.0f, 1.8f, { 255, 255, 255, 255 });
+        float textWidth = BitmapFont::getTextWidth(lvlSS.str(), 1.8f);
+        float ltx = (Constants::SCREEN_WIDTH - textWidth) / 2.0f;
+        BitmapFont::drawText(renderer, lvlSS.str(), ltx, 240.0f, 1.8f, { 255, 255, 255, 255 });
     }
 
     std::stringstream ss;
     ss << "Score: " << score;
-    BitmapFont::drawText(renderer, ss.str(), 170.0f, 300.0f, 2.0f, { 255, 255, 255, 255 });
+    float scW = BitmapFont::getTextWidth(ss.str(), 2.0f);
+    BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - scW) / 2.0f, 300.0f, 2.0f, { 255, 255, 255, 255 });
 
     ss.str("");
     ss << "Best:  " << highScore;
-    BitmapFont::drawText(renderer, ss.str(), 170.0f, 340.0f, 2.0f, { 246, 224, 94, 255 });
+    float bestW = BitmapFont::getTextWidth(ss.str(), 2.0f);
+    BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - bestW) / 2.0f, 340.0f, 2.0f, { 246, 224, 94, 255 });
 
     m_btnRestart.setPosition(125.0f, 420.0f);
     m_btnRestart.render(renderer, { 72, 187, 120, 255 }); // Green
@@ -343,11 +351,13 @@ void HUD::renderLevelComplete(SDL_Renderer* renderer, int level, int score, int 
     SDL_SetRenderDrawColor(renderer, 0x11, 0x1d, 0x14, 0xdf); // Green-tinted overlay
     SDL_RenderFillRect(renderer, &overlay);
 
-    BitmapFont::drawText(renderer, "VICTORY!", 140.0f, 120.0f, 3.2f, { 72, 187, 120, 255 }); // Green
+    std::string vTitle = "VICTORY!";
+    float vw = BitmapFont::getTextWidth(vTitle, 3.2f);
+    BitmapFont::drawText(renderer, vTitle, (Constants::SCREEN_WIDTH - vw) / 2.0f, 120.0f, 3.2f, { 72, 187, 120, 255 }); // Green
 
     std::stringstream lvlSS;
     lvlSS << "LEVEL " << level << " COMPLETE";
-    float textWidth = lvlSS.str().length() * 8.0f * 1.8f;
+    float textWidth = BitmapFont::getTextWidth(lvlSS.str(), 1.8f);
     float tx = (Constants::SCREEN_WIDTH - textWidth) / 2.0f;
     BitmapFont::drawText(renderer, lvlSS.str(), tx, 175.0f, 1.8f, { 255, 255, 255, 255 });
 
@@ -358,24 +368,29 @@ void HUD::renderLevelComplete(SDL_Renderer* renderer, int level, int score, int 
     {
         starsStr += (i < stars) ? " * " : " - ";
     }
-    BitmapFont::drawText(renderer, starsStr, 150.0f, 230.0f, 2.5f, { 246, 224, 94, 255 }); // Gold stars
+    float stW = BitmapFont::getTextWidth(starsStr, 2.5f);
+    BitmapFont::drawText(renderer, starsStr, (Constants::SCREEN_WIDTH - stW) / 2.0f, 230.0f, 2.5f, { 246, 224, 94, 255 }); // Gold stars
 
     // Stats
     std::stringstream ss;
     ss << "Moves: " << moves;
-    BitmapFont::drawText(renderer, ss.str(), 150.0f, 290.0f, 1.8f, { 255, 255, 255, 255 });
+    float mw = BitmapFont::getTextWidth(ss.str(), 1.8f);
+    BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - mw) / 2.0f, 290.0f, 1.8f, { 255, 255, 255, 255 });
 
     ss.str("");
     ss << std::fixed << std::setprecision(1) << "Time:  " << time << "s";
-    BitmapFont::drawText(renderer, ss.str(), 150.0f, 325.0f, 1.8f, { 255, 255, 255, 255 });
+    float tw = BitmapFont::getTextWidth(ss.str(), 1.8f);
+    BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - tw) / 2.0f, 325.0f, 1.8f, { 255, 255, 255, 255 });
 
     ss.str("");
     ss << "Score: " << score;
-    BitmapFont::drawText(renderer, ss.str(), 150.0f, 360.0f, 2.0f, { 104, 219, 120, 255 });
+    float scW = BitmapFont::getTextWidth(ss.str(), 2.0f);
+    BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - scW) / 2.0f, 360.0f, 2.0f, { 104, 219, 120, 255 });
 
     ss.str("");
     ss << "Best:  " << highScore;
-    BitmapFont::drawText(renderer, ss.str(), 150.0f, 395.0f, 1.8f, { 246, 224, 94, 255 });
+    float bW = BitmapFont::getTextWidth(ss.str(), 1.8f);
+    BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - bW) / 2.0f, 395.0f, 1.8f, { 246, 224, 94, 255 });
 
     m_btnNext.render(renderer, { 72, 187, 120, 255 }); // Green
     m_btnRestart.setPosition(125.0f, 510.0f);
@@ -393,7 +408,7 @@ void HUD::renderInfo(SDL_Renderer* renderer, int currentTab)
 
     // Header Title
     std::string title = "GAME GUIDE & INFO";
-    float tw = title.length() * 8.0f * 2.2f;
+    float tw = BitmapFont::getTextWidth(title, 2.2f);
     BitmapFont::drawText(renderer, title, (Constants::SCREEN_WIDTH - tw) / 2.0f, 20.0f, 2.2f, { 246, 224, 94, 255 });
 
     // Tab Buttons at y = 58
@@ -421,46 +436,46 @@ void HUD::renderInfo(SDL_Renderer* renderer, int currentTab)
 
     if (currentTab == 0) // HOW TO PLAY
     {
-        float cy = 120.0f;
-        BitmapFont::drawText(renderer, "MISSION OBJECTIVE", 30.0f, cy, 1.7f, { 72, 187, 120, 255 });
-        cy += 26.0f;
-        BitmapFont::drawText(renderer, "Navigate the golden hero to the green", 30.0f, cy, 1.25f, { 220, 230, 242, 255 });
+        float cy = 118.0f;
+        BitmapFont::drawText(renderer, "MISSION OBJECTIVE", 28.0f, cy, 1.7f, { 72, 187, 120, 255 });
+        cy += 24.0f;
+        BitmapFont::drawText(renderer, "Navigate golden hero to green EXIT", 28.0f, cy, 1.3f, { 220, 230, 242, 255 });
         cy += 18.0f;
-        BitmapFont::drawText(renderer, "EXIT tile before the timer runs out!", 30.0f, cy, 1.25f, { 220, 230, 242, 255 });
+        BitmapFont::drawText(renderer, "tile before countdown reaches zero!", 28.0f, cy, 1.3f, { 220, 230, 242, 255 });
 
-        cy += 30.0f;
-        BitmapFont::drawText(renderer, "CONTROLS & MOVEMENT", 30.0f, cy, 1.7f, { 246, 224, 94, 255 });
-        cy += 26.0f;
-        BitmapFont::drawText(renderer, "- SWIPE in 4 directions anywhere on screen.", 30.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        cy += 28.0f;
+        BitmapFont::drawText(renderer, "CONTROLS & MOVEMENT", 28.0f, cy, 1.7f, { 246, 224, 94, 255 });
+        cy += 24.0f;
+        BitmapFont::drawText(renderer, "- SWIPE 4 directions anywhere on screen.", 28.0f, cy, 1.25f, { 200, 210, 225, 255 });
         cy += 18.0f;
-        BitmapFont::drawText(renderer, "- OR TAP the on-screen directional D-Pad.", 30.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        BitmapFont::drawText(renderer, "- Or TAP the on-screen tactile D-Pad.", 28.0f, cy, 1.25f, { 200, 210, 225, 255 });
         cy += 18.0f;
-        BitmapFont::drawText(renderer, "- Toggle SWIPE, DPAD, or BOTH anytime.", 30.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        BitmapFont::drawText(renderer, "- Toggle SWIPE, DPAD, or BOTH anytime.", 28.0f, cy, 1.25f, { 200, 210, 225, 255 });
 
-        cy += 30.0f;
-        BitmapFont::drawText(renderer, "TIMER & SUDDEN DEATH", 30.0f, cy, 1.7f, { 245, 101, 101, 255 });
-        cy += 26.0f;
-        BitmapFont::drawText(renderer, "- Each level features a strict countdown.", 30.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        cy += 28.0f;
+        BitmapFont::drawText(renderer, "TIMER & SUDDEN DEATH", 28.0f, cy, 1.7f, { 245, 101, 101, 255 });
+        cy += 24.0f;
+        BitmapFont::drawText(renderer, "- Each level has a strict countdown.", 28.0f, cy, 1.25f, { 200, 210, 225, 255 });
         cy += 18.0f;
-        BitmapFont::drawText(renderer, "- Under 5s: 8-bit BGM accelerates urgently!", 30.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        BitmapFont::drawText(renderer, "- Under 5s: BGM accelerates urgently!", 28.0f, cy, 1.25f, { 200, 210, 225, 255 });
         cy += 18.0f;
-        BitmapFont::drawText(renderer, "- Time out = INSTANT GAME OVER!", 30.0f, cy, 1.2f, { 245, 101, 101, 255 });
+        BitmapFont::drawText(renderer, "- Out of time = INSTANT GAME OVER!", 28.0f, cy, 1.25f, { 245, 101, 101, 255 });
 
-        cy += 30.0f;
-        BitmapFont::drawText(renderer, "TACTICAL IN-GAME BUTTONS", 30.0f, cy, 1.7f, { 99, 179, 237, 255 });
-        cy += 26.0f;
-        BitmapFont::drawText(renderer, "- [GIVE]: Concede and retry current level.", 30.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        cy += 28.0f;
+        BitmapFont::drawText(renderer, "TACTICAL BUTTONS", 28.0f, cy, 1.7f, { 99, 179, 237, 255 });
+        cy += 24.0f;
+        BitmapFont::drawText(renderer, "- [GIVE]: Concede & retry current level.", 28.0f, cy, 1.25f, { 200, 210, 225, 255 });
         cy += 18.0f;
-        BitmapFont::drawText(renderer, "- [LVL 1]: Restart entire run from Level 1.", 30.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        BitmapFont::drawText(renderer, "- [LVL 1]: Restart run from Level 1.", 28.0f, cy, 1.25f, { 200, 210, 225, 255 });
         cy += 18.0f;
-        BitmapFont::drawText(renderer, "- [II]: Pause game and access full menu.", 30.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        BitmapFont::drawText(renderer, "- [II]: Pause game and access menu.", 28.0f, cy, 1.25f, { 200, 210, 225, 255 });
 
-        cy += 30.0f;
-        BitmapFont::drawText(renderer, "SCORING & 3-STAR RATINGS", 30.0f, cy, 1.7f, { 246, 224, 94, 255 });
-        cy += 26.0f;
-        BitmapFont::drawText(renderer, "- Complete levels in fewer moves and faster", 30.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        cy += 28.0f;
+        BitmapFont::drawText(renderer, "SCORING & 3-STAR SYSTEM", 28.0f, cy, 1.7f, { 246, 224, 94, 255 });
+        cy += 24.0f;
+        BitmapFont::drawText(renderer, "- Complete levels in fewer moves and faster", 28.0f, cy, 1.25f, { 200, 210, 225, 255 });
         cy += 18.0f;
-        BitmapFont::drawText(renderer, "  times to unlock 3 STARS and high scores!", 30.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        BitmapFont::drawText(renderer, "  times to unlock 3 STARS and high score!", 28.0f, cy, 1.25f, { 200, 210, 225, 255 });
     }
     else if (currentTab == 1) // ALL TILES & ITEMS
     {
@@ -471,22 +486,22 @@ void HUD::renderInfo(SDL_Renderer* renderer, int currentTab)
         };
 
         TileInfo items[] = {
-            { "EXIT", "Goal tile! Step here to finish level", { 72, 187, 120, 255 } },
-            { "DANGER", "Red spikes/traps. Fatal on contact!", { 245, 101, 101, 255 } },
-            { "ICE", "Slick floor. Slides player until obstacle", { 118, 228, 247, 255 } },
-            { "CRUMB", "Single-use stone. Collapses into Pit!", { 214, 158, 46, 255 } },
-            { "PIT", "Bottomless black void. Fatal fall!", { 40, 40, 50, 255 } },
-            { "PORTAL", "Cosmic wormholes linking two points", { 183, 148, 244, 255 } },
-            { "KEY/GATE", "Golden key unlatches locked gate", { 250, 204, 21, 255 } },
-            { "BOMB", "Detonates 3x3 blast clearing walls", { 74, 85, 104, 255 } },
-            { "SHIELD", "Blue crest absorbs 1 death or curse", { 49, 130, 206, 255 } },
-            { "FREEZE", "Hourglass pauses countdown for 8.0s", { 0, 181, 216, 255 } },
-            { "COIN", "Shiny collectible grants +500 PTS", { 250, 204, 21, 255 } },
-            { "CURSE", "Purple debuff reverses moves/warps", { 213, 63, 140, 255 } },
-            { "DEFUSE", "Teal cross cures curse & disarms traps", { 56, 178, 172, 255 } }
+            { "EXIT",     "Goal tile! Step here to finish level", { 72, 187, 120, 255 } },
+            { "DANGER",   "Fatal spikes & traps on contact!",     { 245, 101, 101, 255 } },
+            { "ICE",      "Slick ice. Slide until obstacle",      { 118, 228, 247, 255 } },
+            { "CRUMB",    "Fragile stone. Falls into pit!",       { 214, 158, 46, 255 } },
+            { "PIT",      "Bottomless void. Instant death!",      { 120, 120, 140, 255 } },
+            { "PORTAL",   "Cosmic rift linking two portals",      { 183, 148, 244, 255 } },
+            { "KEY/GATE", "Golden key unlatches locked gate",     { 250, 204, 21, 255 } },
+            { "BOMB",     "Detonates 3x3 blast clearing walls",   { 140, 150, 170, 255 } },
+            { "SHIELD",   "Protective crest absorbs 1 death",     { 49, 130, 206, 255 } },
+            { "FREEZE",   "Hourglass pauses timer for 8.0s",      { 0, 181, 216, 255 } },
+            { "COIN",     "Shiny bonus treasure grants +500 PTS", { 250, 204, 21, 255 } },
+            { "CURSE",    "Purple debuff reverses hero moves",    { 213, 63, 140, 255 } },
+            { "DEFUSE",   "Teal cross cures curse & traps",       { 56, 178, 172, 255 } }
         };
 
-        float startY = 114.0f;
+        float startY = 112.0f;
         float rowH = 46.0f;
 
         for (int i = 0; i < 13; ++i)
@@ -499,47 +514,49 @@ void HUD::renderInfo(SDL_Renderer* renderer, int currentTab)
             SDL_RenderFillRect(renderer, &iconRect);
 
             // Name
-            BitmapFont::drawText(renderer, items[i].name, 56.0f, ry + 3.0f, 1.4f, items[i].col);
+            BitmapFont::drawText(renderer, items[i].name, 56.0f, ry + 2.0f, 1.5f, items[i].col);
 
             // Desc
-            BitmapFont::drawText(renderer, items[i].desc, 56.0f, ry + 22.0f, 1.15f, { 180, 195, 215, 255 });
+            BitmapFont::drawText(renderer, items[i].desc, 56.0f, ry + 22.0f, 1.25f, { 190, 205, 225, 255 });
         }
     }
     else if (currentTab == 2) // DEVELOPER INFO
     {
-        float cy = 125.0f;
-        BitmapFont::drawText(renderer, "ONE MORE MOVE", 30.0f, cy, 2.4f, { 246, 224, 94, 255 });
+        float cy = 120.0f;
+        BitmapFont::drawText(renderer, "ONE MORE MOVE", 28.0f, cy, 2.4f, { 246, 224, 94, 255 });
+        cy += 28.0f;
+        BitmapFont::drawText(renderer, "TACTICAL ESCAPE - RETRO EDITION", 28.0f, cy, 1.35f, { 160, 174, 192, 255 });
+
         cy += 30.0f;
-        BitmapFont::drawText(renderer, "TACTICAL ESCAPE - ENHANCED EDITION", 30.0f, cy, 1.3f, { 160, 174, 192, 255 });
-
-        cy += 32.0f;
-        BitmapFont::drawText(renderer, "DEVELOPER & CREATOR", 30.0f, cy, 1.8f, { 72, 187, 120, 255 });
-        cy += 26.0f;
-        BitmapFont::drawText(renderer, "Prasad Kankhar", 30.0f, cy, 1.6f, { 255, 255, 255, 255 });
+        BitmapFont::drawText(renderer, "CREATOR & LEAD DEVELOPER", 28.0f, cy, 1.8f, { 72, 187, 120, 255 });
+        cy += 24.0f;
+        BitmapFont::drawText(renderer, "Prasad Kankhar", 28.0f, cy, 1.6f, { 255, 255, 255, 255 });
         cy += 20.0f;
-        BitmapFont::drawText(renderer, "Lead Game Designer & Programmer", 30.0f, cy, 1.25f, { 180, 195, 215, 255 });
+        BitmapFont::drawText(renderer, "Lead Game Designer & Programmer", 28.0f, cy, 1.3f, { 180, 195, 215, 255 });
 
-        cy += 32.0f;
-        BitmapFont::drawText(renderer, "ENGINE & TECH SPECS", 30.0f, cy, 1.8f, { 99, 179, 237, 255 });
+        cy += 30.0f;
+        BitmapFont::drawText(renderer, "ENGINE & TECH ARCHITECTURE", 28.0f, cy, 1.8f, { 99, 179, 237, 255 });
         cy += 24.0f;
-        BitmapFont::drawText(renderer, "- Language: Modern C++", 30.0f, cy, 1.25f, { 200, 210, 225, 255 });
+        BitmapFont::drawText(renderer, "- Language: Modern ISO C++20", 28.0f, cy, 1.3f, { 200, 210, 225, 255 });
         cy += 18.0f;
-        BitmapFont::drawText(renderer, "- Graphics: SDL3 Native Vector System", 30.0f, cy, 1.25f, { 200, 210, 225, 255 });
+        BitmapFont::drawText(renderer, "- Graphics: SDL3 Vector & Geometry", 28.0f, cy, 1.3f, { 200, 210, 225, 255 });
         cy += 18.0f;
-        BitmapFont::drawText(renderer, "- Audio: 100% Procedural 8-Bit Chiptune", 30.0f, cy, 1.25f, { 200, 210, 225, 255 });
+        BitmapFont::drawText(renderer, "- Font: Custom Code-Synthesized CP437", 28.0f, cy, 1.3f, { 200, 210, 225, 255 });
         cy += 18.0f;
-        BitmapFont::drawText(renderer, "- Zero bloated external assets (<5MB APK)", 30.0f, cy, 1.25f, { 200, 210, 225, 255 });
+        BitmapFont::drawText(renderer, "- Audio: 100% Procedural 8-Bit Chiptune", 28.0f, cy, 1.3f, { 200, 210, 225, 255 });
         cy += 18.0f;
-        BitmapFont::drawText(renderer, "- Cross-Platform: Android & Desktop", 30.0f, cy, 1.25f, { 200, 210, 225, 255 });
+        BitmapFont::drawText(renderer, "- APK Size: Ultra-light (<5 MB)", 28.0f, cy, 1.3f, { 200, 210, 225, 255 });
+        cy += 18.0f;
+        BitmapFont::drawText(renderer, "- Platform: Android Native & Desktop", 28.0f, cy, 1.3f, { 200, 210, 225, 255 });
 
-        cy += 32.0f;
-        BitmapFont::drawText(renderer, "DESIGN PHILOSOPHY", 30.0f, cy, 1.8f, { 246, 224, 94, 255 });
+        cy += 30.0f;
+        BitmapFont::drawText(renderer, "DESIGN PHILOSOPHY", 28.0f, cy, 1.8f, { 246, 224, 94, 255 });
         cy += 24.0f;
-        BitmapFont::drawText(renderer, "Built to deliver the pure, intense thrill", 30.0f, cy, 1.25f, { 220, 230, 245, 255 });
+        BitmapFont::drawText(renderer, "Built to deliver the pure, intense thrill", 28.0f, cy, 1.3f, { 220, 230, 245, 255 });
         cy += 18.0f;
-        BitmapFont::drawText(renderer, "of retro tactical gaming where every single", 30.0f, cy, 1.25f, { 220, 230, 245, 255 });
+        BitmapFont::drawText(renderer, "of retro tactical gaming where every single", 28.0f, cy, 1.3f, { 220, 230, 245, 255 });
         cy += 18.0f;
-        BitmapFont::drawText(renderer, "move counts. Think fast, plan, and escape!", 30.0f, cy, 1.25f, { 220, 230, 245, 255 });
+        BitmapFont::drawText(renderer, "move counts. Think fast, plan, and escape!", 28.0f, cy, 1.3f, { 220, 230, 245, 255 });
     }
 
     // Back to Menu Button

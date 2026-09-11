@@ -9,9 +9,12 @@ namespace BitmapFont
     // 8x8 font data for ASCII chars 32 to 127
     extern const unsigned char font[96][8];
 
-    // Renders a single character using SDL_RenderFillRects or SDL_RenderPoints for efficiency
+    // Renders a single character using merged horizontal runs for crisp rasterization
     void drawChar(SDL_Renderer* renderer, char c, float x, float y, float scale, SDL_Color color);
 
-    // Renders a string of text
+    // Renders a string of text with automatic high-contrast drop shadow
     void drawText(SDL_Renderer* renderer, const std::string& text, float x, float y, float scale, SDL_Color color);
+
+    // Calculates width of text in screen pixels at the given scale
+    float getTextWidth(const std::string& text, float scale);
 }

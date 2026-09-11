@@ -47,16 +47,25 @@ void Button::render(SDL_Renderer* renderer, SDL_Color buttonColor, SDL_Color tex
     SDL_SetRenderDrawColor(renderer, buttonColor.r + 30, buttonColor.g + 30, buttonColor.b + 30, 255);
     SDL_RenderRect(renderer, &outlineRect);
 
-    // Calculate font scaling based on button size
-    float scale = 1.5f;
-    if (m_rect.h >= 60.0f) scale = 2.0f;
+    // Responsive font scaling based on button height
+    float scale = 1.6f;
+    if (m_rect.h >= 45.0f) scale = 1.8f;
+    if (m_rect.h >= 60.0f) scale = 2.2f;
 
-    // Center text label inside the button bounds
-    float textWidth = m_label.length() * 8.0f * scale;
+    // Auto-scale down if text would overflow button width
+    float maxW = m_rect.w - 12.0f;
+    float textWidth = BitmapFont::getTextWidth(m_label, scale);
+    if (textWidth > maxW && textWidth > 0.0f)
+    {
+        scale *= (maxW / textWidth);
+        if (scale < 1.1f) scale = 1.1f;
+        textWidth = BitmapFont::getTextWidth(m_label, scale);
+    }
+
     float textHeight = 8.0f * scale;
-
     float tx = m_rect.x + (m_rect.w - textWidth) / 2.0f;
     float ty = m_rect.y + (m_rect.h - textHeight) / 2.0f;
 
     BitmapFont::drawText(renderer, m_label, tx, ty, scale, textColor);
 }
+
