@@ -49,6 +49,7 @@ private:
     void triggerLevelComplete();
     void triggerDebuff(DebuffType debuff);
     void reviseMap();
+    void detonateBomb(int bx, int by);
 
     // SDL Core
     SDL_Window* m_window = nullptr;
@@ -79,6 +80,7 @@ private:
     std::string m_debuffMessage = "";
     float m_debuffMessageTimer = 0.0f;
     bool m_timedOut = false;
+    float m_freezeTimer = 0.0f;
 
     // Touch & Swipe Controls
     float m_touchStartX = 0.0f;

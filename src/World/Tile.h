@@ -8,7 +8,17 @@ enum class TileType
     Danger,
     Trap,
     Curse,
-    Defuse
+    Defuse,
+    Ice,
+    Crumbling,
+    Pit,
+    Portal,
+    Key,
+    Gate,
+    Bomb,
+    Shield,
+    TimeFreeze,
+    Coin
 };
 
 enum class DebuffType
@@ -25,4 +35,7 @@ struct Tile
     TileType type = TileType::Empty;
     bool active = true;
     DebuffType debuff = DebuffType::None;
+    int portalTargetX = -1;
+    int portalTargetY = -1;
+    int fuse = 0;
 };

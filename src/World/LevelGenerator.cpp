@@ -96,6 +96,8 @@ Board LevelGenerator::generate(int level, int seed, int& outPlayerX, int& outPla
         // Run BFS path verification
         if (board.hasPath(outPlayerX, outPlayerY, outExitX, outExitY))
         {
+            board.setBiome(level);
+
             // Collect empty interior tiles (excluding player spawn and exit)
             std::vector<std::pair<int, int>> emptyTiles;
             for (int y = 1; y < rows - 1; ++y)
@@ -111,12 +113,24 @@ Board LevelGenerator::generate(int level, int seed, int& outPlayerX, int& outPla
                 }
             }
 
-            // Spawn Curse/Debuff tiles (Level 2+, 1 to 3 tiles)
+            std::shuffle(emptyTiles.begin(), emptyTiles.end(), rng);
+
+            // 1. Spawn Coins (Level 2+, 1 to 3 coins)
             if (level >= 2 && !emptyTiles.empty())
             {
-                std::shuffle(emptyTiles.begin(), emptyTiles.end(), rng);
+                int coinCount = std::min(static_cast<int>(emptyTiles.size()), 1 + (level % 3));
+                for (int i = 0; i < coinCount && !emptyTiles.empty(); ++i)
+                {
+                    auto [cx, cy] = emptyTiles.back();
+                    emptyTiles.pop_back();
+                    board.setTileType(cx, cy, TileType::Coin);
+                }
+            }
+
+            // 2. Spawn Curse/Debuff tiles (Level 2+, 1 to 3 tiles)
+            if (level >= 2 && !emptyTiles.empty())
+            {
                 int curseCount = std::min(static_cast<int>(emptyTiles.size()), std::min(1 + (level / 4), 3));
-                
                 DebuffType debuffs[] = {
                     DebuffType::ReverseControls,
                     DebuffType::TeleportSpawn,
@@ -141,6 +155,98 @@ Board LevelGenerator::generate(int level, int seed, int& outPlayerX, int& outPla
                     emptyTiles.pop_back();
                     board.setTileType(dx, dy, TileType::Defuse);
                 }
+            }
+
+            // 3. Spawn Crumbling floor tiles (Level 3+, 1 to 3 tiles)
+            if (level >= 3 && !emptyTiles.empty())
+            {
+                int crumbCount = std::min(static_cast<int>(emptyTiles.size()), 1 + (level / 4));
+                for (int i = 0; i < crumbCount && !emptyTiles.empty(); ++i)
+                {
+                    auto [cx, cy] = emptyTiles.back();
+                    emptyTiles.pop_back();
+                    board.setTileType(cx, cy, TileType::Crumbling);
+                }
+            }
+
+            // 4. Spawn Key & Gate (Level 4+, 1 pair)
+            if (level >= 4 && emptyTiles.size() >= 4)
+            {
+                // Find empty tile adjacent or close to exit for Gate
+                int gateX = -1, gateY = -1;
+                int keyX = -1, keyY = -1;
+
+                // Pick key from back
+                keyX = emptyTiles.back().first;
+                keyY = emptyTiles.back().second;
+                emptyTiles.pop_back();
+
+                // Candidate gate
+                gateX = emptyTiles.back().first;
+                gateY = emptyTiles.back().second;
+                emptyTiles.pop_back();
+
+                board.setTileType(gateX, gateY, TileType::Gate);
+                // Verify that player can reach the key while gate is locked
+                if (board.hasPath(outPlayerX, outPlayerY, keyX, keyY))
+                {
+                    board.setTileType(keyX, keyY, TileType::Key);
+                }
+                else
+                {
+                    // Revert gate and key to empty if key is blocked
+                    board.setTileType(gateX, gateY, TileType::Empty);
+                    board.setTileType(keyX, keyY, TileType::Empty);
+                }
+            }
+
+            // 5. Spawn Ice tiles (Level 5+, 2 to 4 slick tiles)
+            if (level >= 5 && !emptyTiles.empty())
+            {
+                int iceCount = std::min(static_cast<int>(emptyTiles.size()), 2 + (level % 3));
+                for (int i = 0; i < iceCount && !emptyTiles.empty(); ++i)
+                {
+                    auto [ix, iy] = emptyTiles.back();
+                    emptyTiles.pop_back();
+                    board.setTileType(ix, iy, TileType::Ice);
+                }
+            }
+
+            // 6. Spawn Portals (Level 5+, 1 pair)
+            if (level >= 5 && emptyTiles.size() >= 2 && (level % 2 == 1))
+            {
+                auto [p1x, p1y] = emptyTiles.back();
+                emptyTiles.pop_back();
+                auto [p2x, p2y] = emptyTiles.back();
+                emptyTiles.pop_back();
+
+                Tile t1{ TileType::Portal, true, DebuffType::None, p2x, p2y, 0 };
+                Tile t2{ TileType::Portal, true, DebuffType::None, p1x, p1y, 0 };
+                board.setTile(p1x, p1y, t1);
+                board.setTile(p2x, p2y, t2);
+            }
+
+            // 7. Power-ups: Shield & TimeFreeze (Level 6+)
+            if (level >= 6 && !emptyTiles.empty())
+            {
+                auto [sx, sy] = emptyTiles.back();
+                emptyTiles.pop_back();
+                board.setTileType(sx, sy, TileType::Shield);
+
+                if (!emptyTiles.empty())
+                {
+                    auto [tx, ty] = emptyTiles.back();
+                    emptyTiles.pop_back();
+                    board.setTileType(tx, ty, TileType::TimeFreeze);
+                }
+            }
+
+            // 8. Bomb (Level 7+, 1 bomb)
+            if (level >= 7 && !emptyTiles.empty())
+            {
+                auto [bx, by] = emptyTiles.back();
+                emptyTiles.pop_back();
+                board.setTileType(bx, by, TileType::Bomb);
             }
 
             std::cout << "[Generator] Successfully generated solvable level " << level 

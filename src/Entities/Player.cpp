@@ -18,6 +18,8 @@ void Player::reset(int x, int y)
     m_visualX = static_cast<float>(x);
     m_visualY = static_cast<float>(y);
     m_alive = true;
+    m_hasShield = false;
+    m_hasKey = false;
 }
 
 void Player::move(int dx, int dy, const Board& board)
@@ -29,11 +31,13 @@ void Player::move(int dx, int dy, const Board& board)
 
     if (board.isValidPosition(nextX, nextY))
     {
-        if (board.getTileType(nextX, nextY) != TileType::Wall)
-        {
-            m_x = nextX;
-            m_y = nextY;
-        }
+        TileType type = board.getTileType(nextX, nextY);
+        // Wall blocks; Gate blocks if player does not have key
+        if (type == TileType::Wall) return;
+        if (type == TileType::Gate && !m_hasKey) return;
+
+        m_x = nextX;
+        m_y = nextY;
     }
 }
 
@@ -61,6 +65,19 @@ void Player::render(SDL_Renderer* renderer, float originX, float originY)
     rect.x = originX + m_visualX * (Constants::TILE_SIZE + Constants::GRID_SPACING);
     rect.y = originY + m_visualY * (Constants::TILE_SIZE + Constants::GRID_SPACING);
     
+    // Shield aura if active
+    if (m_hasShield)
+    {
+        float pulse = 0.5f + 0.5f * std::sin(SDL_GetTicks() / 120.0f);
+        SDL_FRect aura = rect;
+        aura.x -= 3.0f + pulse * 2.0f;
+        aura.y -= 3.0f + pulse * 2.0f;
+        aura.w += (3.0f + pulse * 2.0f) * 2.0f;
+        aura.h += (3.0f + pulse * 2.0f) * 2.0f;
+        SDL_SetRenderDrawColor(renderer, 0x63, 0xb3, 0xed, 0xbb);
+        SDL_RenderRect(renderer, &aura);
+    }
+
     // Player is slightly smaller than the tile for visual styling
     float padding = 4.0f;
     rect.x += padding;
@@ -80,4 +97,12 @@ void Player::render(SDL_Renderer* renderer, float originX, float originY)
     innerRect.h -= 8.0f;
     SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xff);
     SDL_RenderFillRect(renderer, &innerRect);
+
+    // Key carried indicator (tiny golden dot in center)
+    if (m_hasKey)
+    {
+        SDL_FRect keyDot = { rect.x + rect.w / 2.0f - 3.0f, rect.y + rect.h / 2.0f - 3.0f, 6.0f, 6.0f };
+        SDL_SetRenderDrawColor(renderer, 0xd6, 0x9e, 0x2e, 0xff);
+        SDL_RenderFillRect(renderer, &keyDot);
+    }
 }

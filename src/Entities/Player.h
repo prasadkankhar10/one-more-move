@@ -17,8 +17,14 @@ public:
 
     int getX() const { return m_x; }
     int getY() const { return m_y; }
+    void setPosition(int x, int y) { m_x = x; m_y = y; m_visualX = static_cast<float>(x); m_visualY = static_cast<float>(y); }
     bool isAlive() const { return m_alive; }
     void setAlive(bool alive) { m_alive = alive; }
+
+    bool hasShield() const { return m_hasShield; }
+    void setShield(bool shield) { m_hasShield = shield; }
+    bool hasKey() const { return m_hasKey; }
+    void setKey(bool key) { m_hasKey = key; }
 
     float getVisualX() const { return m_visualX; }
     float getVisualY() const { return m_visualY; }
@@ -31,4 +37,6 @@ private:
     float m_visualY = 0.0f;
 
     bool m_alive = true;
+    bool m_hasShield = false;
+    bool m_hasKey = false;
 };

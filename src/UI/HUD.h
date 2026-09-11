@@ -12,7 +12,7 @@ public:
     void init();
     
     // Renders HUD during playing state (top stats + bottom D-pad)
-    void renderPlaying(SDL_Renderer* renderer, int level, int moves, int score, bool soundOn, float timeLeft, float timeLimit, int controlMode, int reversedTurns, const std::string& debuffMsg);
+    void renderPlaying(SDL_Renderer* renderer, int level, int moves, int score, bool soundOn, float timeLeft, float timeLimit, int controlMode, int reversedTurns, const std::string& debuffMsg, bool hasShield = false, bool hasKey = false, float freezeTime = 0.0f, const std::string& biomeName = "");
 
     // Overlay Screen Renderers
     void renderMainMenu(SDL_Renderer* renderer, int highScore, int highestLevel, int controlMode);

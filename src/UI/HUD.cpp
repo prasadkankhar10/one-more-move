@@ -40,7 +40,7 @@ void HUD::init()
     m_btnMenu = Button(115.0f, 580.0f, 220.0f, 50.0f, "MAIN MENU");
 }
 
-void HUD::renderPlaying(SDL_Renderer* renderer, int level, int moves, int score, bool soundOn, float timeLeft, float timeLimit, int controlMode, int reversedTurns, const std::string& debuffMsg)
+void HUD::renderPlaying(SDL_Renderer* renderer, int level, int moves, int score, bool soundOn, float timeLeft, float timeLimit, int controlMode, int reversedTurns, const std::string& debuffMsg, bool hasShield, bool hasKey, float freezeTime, const std::string& biomeName)
 {
     // Draw background panel for stats (82px height prevents any text collisions)
     SDL_FRect headerPanel = { 0.0f, 0.0f, static_cast<float>(Constants::SCREEN_WIDTH), 82.0f };
@@ -49,17 +49,36 @@ void HUD::renderPlaying(SDL_Renderer* renderer, int level, int moves, int score,
     SDL_SetRenderDrawColor(renderer, 0x22, 0x27, 0x35, 0xff);
     SDL_RenderLine(renderer, 0.0f, 82.0f, static_cast<float>(Constants::SCREEN_WIDTH), 82.0f);
 
-    // Row 1 (y = 18): Buttons + Level + Moves
+    // Row 1 (y = 18): Buttons + Level + Moves + Biome hint
     m_btnPause.render(renderer, { 45, 55, 72, 255 });
     m_btnSound.render(renderer, soundOn ? SDL_Color{ 45, 55, 72, 255 } : SDL_Color{ 110, 45, 45, 255 });
 
     std::stringstream ss;
     ss << "LVL: " << level;
-    BitmapFont::drawText(renderer, ss.str(), 72.0f, 20.0f, 1.5f, { 255, 255, 255, 255 });
+    BitmapFont::drawText(renderer, ss.str(), 68.0f, 20.0f, 1.4f, { 255, 255, 255, 255 });
 
     ss.str("");
     ss << "MOVES: " << moves;
-    BitmapFont::drawText(renderer, ss.str(), 185.0f, 20.0f, 1.5f, { 255, 255, 255, 255 });
+    BitmapFont::drawText(renderer, ss.str(), 165.0f, 20.0f, 1.4f, { 255, 255, 255, 255 });
+
+    // Inventory indicators in Row 1 right side
+    float badgeX = 270.0f;
+    if (hasShield)
+    {
+        SDL_FRect sBadge = { badgeX, 16.0f, 50.0f, 20.0f };
+        SDL_SetRenderDrawColor(renderer, 0x2b, 0x6c, 0xb0, 0xff);
+        SDL_RenderFillRect(renderer, &sBadge);
+        BitmapFont::drawText(renderer, "SHLD", badgeX + 4.0f, 18.0f, 1.2f, { 255, 255, 255, 255 });
+        badgeX += 54.0f;
+    }
+    if (hasKey)
+    {
+        SDL_FRect kBadge = { badgeX, 16.0f, 40.0f, 20.0f };
+        SDL_SetRenderDrawColor(renderer, 0xd6, 0x9e, 0x2e, 0xff);
+        SDL_RenderFillRect(renderer, &kBadge);
+        BitmapFont::drawText(renderer, "KEY", badgeX + 5.0f, 18.0f, 1.2f, { 255, 255, 255, 255 });
+        badgeX += 44.0f;
+    }
 
     // Row 2 (y = 52): Control mode toggle button + Score + Time bar
     std::string ctrlLabel = (controlMode == 0) ? "BOTH" : (controlMode == 1 ? "SWIPE" : "DPAD");
@@ -75,11 +94,19 @@ void HUD::renderPlaying(SDL_Renderer* renderer, int level, int moves, int score,
     // Time text & progress bar
     if (timeLeft < 0.0f) timeLeft = 0.0f;
     char timeBuffer[16];
-    snprintf(timeBuffer, sizeof(timeBuffer), "%.1fs", timeLeft);
+    if (freezeTime > 0.0f)
+    {
+        snprintf(timeBuffer, sizeof(timeBuffer), "FRZ:%.0fs", freezeTime);
+    }
+    else
+    {
+        snprintf(timeBuffer, sizeof(timeBuffer), "%.1fs", timeLeft);
+    }
 
-    bool isLowTime = (timeLeft < 5.0f);
-    SDL_Color timeColor = isLowTime ? SDL_Color{ 245, 101, 101, 255 } : SDL_Color{ 246, 224, 94, 255 };
-    BitmapFont::drawText(renderer, timeBuffer, 235.0f, 54.0f, 1.4f, timeColor);
+    bool isLowTime = (timeLeft < 5.0f && freezeTime <= 0.0f);
+    SDL_Color timeColor = (freezeTime > 0.0f) ? SDL_Color{ 100, 220, 255, 255 } : 
+                         (isLowTime ? SDL_Color{ 245, 101, 101, 255 } : SDL_Color{ 246, 224, 94, 255 });
+    BitmapFont::drawText(renderer, timeBuffer, 225.0f, 54.0f, 1.3f, timeColor);
 
     // Time Progress Bar
     float barX = 295.0f;
@@ -96,7 +123,11 @@ void HUD::renderPlaying(SDL_Renderer* renderer, int level, int moves, int score,
     if (ratio < 0.0f) ratio = 0.0f;
 
     SDL_FRect fillBar = { barX, barY, barW * ratio, barH };
-    if (ratio > 0.3f)
+    if (freezeTime > 0.0f)
+    {
+        SDL_SetRenderDrawColor(renderer, 99, 179, 237, 255); // Cyan freeze bar
+    }
+    else if (ratio > 0.3f)
     {
         SDL_SetRenderDrawColor(renderer, 72, 187, 120, 255); // Green
     }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <string>
 #include <SDL3/SDL.h>
 #include "Tile.h"
 
@@ -25,12 +26,17 @@ public:
     int getWidth() const { return m_width; }
     int getHeight() const { return m_height; }
 
+    void setBiome(int level);
+    int getBiome() const { return m_biome; }
+    std::string getBiomeName() const;
+
     // Helpers to get screen coordinates for visual interpolation
     SDL_FRect getTileRect(int x, int y) const;
 
 private:
     int m_width = 0;
     int m_height = 0;
+    int m_biome = 0;
     std::vector<std::vector<Tile>> m_grid;
 
     // Grid screen positions

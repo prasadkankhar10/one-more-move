@@ -117,6 +117,7 @@ void Game::startNewGame()
     m_debuffMessage = "";
     m_debuffMessageTimer = 0.0f;
     m_timedOut = false;
+    m_freezeTimer = 0.0f;
     m_lastTime = SDL_GetTicks();
 
     // Seed randomly
@@ -140,6 +141,7 @@ void Game::loadNextLevel()
     m_debuffMessage = "";
     m_debuffMessageTimer = 0.0f;
     m_timedOut = false;
+    m_freezeTimer = 0.0f;
     m_lastTime = SDL_GetTicks();
 
     m_currentSeed = static_cast<int>(SDL_GetTicks() + m_currentLevel);
@@ -165,6 +167,39 @@ void Game::handleMovement(int dx, int dy)
 
     int oldX = m_player.getX();
     int oldY = m_player.getY();
+    TileType prevStepType = m_board.getTileType(oldX, oldY);
+
+    int targetX = oldX + dx;
+    int targetY = oldY + dy;
+
+    // Check Gate tile before moving
+    if (m_board.isValidPosition(targetX, targetY) && m_board.getTileType(targetX, targetY) == TileType::Gate)
+    {
+        if (m_player.hasKey())
+        {
+            // Unlock and open gate
+            m_player.setKey(false);
+            m_board.setTileType(targetX, targetY, TileType::Empty);
+            m_audio.playGateSound();
+            m_debuffMessage = "! GATE UNLOCKED !";
+            m_debuffMessageTimer = 2.0f;
+
+            float totalWidth = m_board.getWidth() * Constants::TILE_SIZE + (m_board.getWidth() - 1) * Constants::GRID_SPACING;
+            float totalHeight = m_board.getHeight() * Constants::TILE_SIZE + (m_board.getHeight() - 1) * Constants::GRID_SPACING;
+            float originX = (Constants::SCREEN_WIDTH - totalWidth) / 2.0f;
+            float originY = (Constants::SCREEN_HEIGHT - totalHeight) / 2.0f;
+            spawnExplosion(originX + targetX * (Constants::TILE_SIZE + Constants::GRID_SPACING) + 20.0f,
+                           originY + targetY * (Constants::TILE_SIZE + Constants::GRID_SPACING) + 20.0f,
+                           { 250, 204, 21, 255 });
+        }
+        else
+        {
+            m_audio.playInvalidMoveSound();
+            m_debuffMessage = "! GATE LOCKED (FIND KEY) !";
+            m_debuffMessageTimer = 2.0f;
+            return;
+        }
+    }
 
     // Move player logically
     m_player.move(dx, dy, m_board);
@@ -175,29 +210,136 @@ void Game::handleMovement(int dx, int dy)
         m_scoreSystem.incrementMoves();
         m_audio.playMoveSound();
 
+        // If previous tile was Crumbling, it collapses into an impassable Pit!
+        if (prevStepType == TileType::Crumbling)
+        {
+            m_board.setTileType(oldX, oldY, TileType::Pit);
+            m_audio.playDestructionSound();
+
+            float totalWidth = m_board.getWidth() * Constants::TILE_SIZE + (m_board.getWidth() - 1) * Constants::GRID_SPACING;
+            float totalHeight = m_board.getHeight() * Constants::TILE_SIZE + (m_board.getHeight() - 1) * Constants::GRID_SPACING;
+            float originX = (Constants::SCREEN_WIDTH - totalWidth) / 2.0f;
+            float originY = (Constants::SCREEN_HEIGHT - totalHeight) / 2.0f;
+            spawnExplosion(originX + oldX * (Constants::TILE_SIZE + Constants::GRID_SPACING) + 20.0f,
+                           originY + oldY * (Constants::TILE_SIZE + Constants::GRID_SPACING) + 20.0f,
+                           { 214, 158, 46, 255 });
+        }
+
         // Decrement reversed controls counter on successful move
         if (m_reversedTurns > 0)
         {
             m_reversedTurns--;
         }
 
-        // Check landing tile BEFORE environment update (for Curse and Defuse)
-        TileType landingTile = m_board.getTileType(m_player.getX(), m_player.getY());
-        if (landingTile == TileType::Curse)
+        // Ice slide mechanic: continue sliding until hitting non-ice or obstacle
+        if (m_board.getTileType(m_player.getX(), m_player.getY()) == TileType::Ice)
         {
-            DebuffType debuff = m_board.getDebuffType(m_player.getX(), m_player.getY());
-            triggerDebuff(debuff);
-            m_board.setTileType(m_player.getX(), m_player.getY(), TileType::Empty);
+            m_audio.playSlideSound();
+            while (m_board.getTileType(m_player.getX(), m_player.getY()) == TileType::Ice)
+            {
+                int nextSlideX = m_player.getX() + dx;
+                int nextSlideY = m_player.getY() + dy;
+                if (!m_board.isValidPosition(nextSlideX, nextSlideY)) break;
+
+                TileType nxtType = m_board.getTileType(nextSlideX, nextSlideY);
+                if (nxtType == TileType::Wall || (nxtType == TileType::Gate && !m_player.hasKey())) break;
+
+                // Advance one step forward on ice
+                m_player.setPosition(nextSlideX, nextSlideY);
+
+                // Stop if landed on a non-ice tile (e.g. Empty, Hazard, Portal, Exit)
+                if (nxtType != TileType::Ice) break;
+            }
         }
+
+        // Process landing tile effects
+        TileType landingTile = m_board.getTileType(m_player.getX(), m_player.getY());
+
+        // 1. Portal Teleportation
+        if (landingTile == TileType::Portal)
+        {
+            const Tile& pTile = m_board.getTile(m_player.getX(), m_player.getY());
+            if (m_board.isValidPosition(pTile.portalTargetX, pTile.portalTargetY))
+            {
+                m_player.setPosition(pTile.portalTargetX, pTile.portalTargetY);
+                m_audio.playPortalSound();
+
+                float totalWidth = m_board.getWidth() * Constants::TILE_SIZE + (m_board.getWidth() - 1) * Constants::GRID_SPACING;
+                float totalHeight = m_board.getHeight() * Constants::TILE_SIZE + (m_board.getHeight() - 1) * Constants::GRID_SPACING;
+                float originX = (Constants::SCREEN_WIDTH - totalWidth) / 2.0f;
+                float originY = (Constants::SCREEN_HEIGHT - totalHeight) / 2.0f;
+                spawnExplosion(originX + pTile.portalTargetX * (Constants::TILE_SIZE + Constants::GRID_SPACING) + 20.0f,
+                               originY + pTile.portalTargetY * (Constants::TILE_SIZE + Constants::GRID_SPACING) + 20.0f,
+                               { 183, 148, 244, 255 });
+            }
+        }
+        // 2. Key Pickup
+        else if (landingTile == TileType::Key)
+        {
+            m_player.setKey(true);
+            m_board.setTileType(m_player.getX(), m_player.getY(), TileType::Empty);
+            m_audio.playKeySound();
+            m_debuffMessage = "! KEY ACQUIRED !";
+            m_debuffMessageTimer = 2.0f;
+        }
+        // 3. Shield Power-up
+        else if (landingTile == TileType::Shield)
+        {
+            m_player.setShield(true);
+            m_board.setTileType(m_player.getX(), m_player.getY(), TileType::Empty);
+            m_audio.playShieldSound();
+            m_debuffMessage = "! ENERGY SHIELD EQUIPPED !";
+            m_debuffMessageTimer = 2.5f;
+        }
+        // 4. Time Freeze Power-up
+        else if (landingTile == TileType::TimeFreeze)
+        {
+            m_freezeTimer = 8.0f;
+            m_board.setTileType(m_player.getX(), m_player.getY(), TileType::Empty);
+            m_audio.playFreezeSound();
+            m_debuffMessage = "! TIME FROZEN (8 SECONDS) !";
+            m_debuffMessageTimer = 2.5f;
+        }
+        // 5. Coin Collectible
+        else if (landingTile == TileType::Coin)
+        {
+            m_accumulatedScore += 500;
+            m_board.setTileType(m_player.getX(), m_player.getY(), TileType::Empty);
+            m_audio.playCoinSound();
+            m_debuffMessage = "+500 COIN BONUS!";
+            m_debuffMessageTimer = 1.8f;
+        }
+        // 6. Bomb Detonation
+        else if (landingTile == TileType::Bomb)
+        {
+            detonateBomb(m_player.getX(), m_player.getY());
+        }
+        // 7. Curse Tile
+        else if (landingTile == TileType::Curse)
+        {
+            if (m_player.hasShield())
+            {
+                m_player.setShield(false);
+                m_audio.playShieldSound();
+                m_debuffMessage = "! SHIELD ABSORBED CURSE !";
+                m_debuffMessageTimer = 2.5f;
+                m_board.setTileType(m_player.getX(), m_player.getY(), TileType::Empty);
+            }
+            else
+            {
+                DebuffType debuff = m_board.getDebuffType(m_player.getX(), m_player.getY());
+                triggerDebuff(debuff);
+                m_board.setTileType(m_player.getX(), m_player.getY(), TileType::Empty);
+            }
+        }
+        // 8. Defuse Tile
         else if (landingTile == TileType::Defuse)
         {
-            // Clear all debuffs
             m_reversedTurns = 0;
             m_debuffMessage = "! HAZARDS DEFUSED !";
             m_debuffMessageTimer = 2.5f;
             m_audio.playWinSound();
 
-            // Disarm any adjacent danger tiles
             for (int ny = m_player.getY() - 1; ny <= m_player.getY() + 1; ++ny)
             {
                 for (int nx = m_player.getX() - 1; nx <= m_player.getX() + 1; ++nx)
@@ -211,10 +353,26 @@ void Game::handleMovement(int dx, int dy)
             }
             m_board.setTileType(m_player.getX(), m_player.getY(), TileType::Empty);
         }
+        // 9. Pit (Bottomless pit)
+        else if (landingTile == TileType::Pit)
+        {
+            if (m_player.hasShield())
+            {
+                m_player.setShield(false);
+                m_audio.playShieldSound();
+                m_debuffMessage = "! SHIELD SAVED YOU FROM PIT !";
+                m_debuffMessageTimer = 2.5f;
+            }
+            else
+            {
+                m_timedOut = false;
+                triggerGameOver();
+                return;
+            }
+        }
 
         // Update environment turn
         int exitX = -1, exitY = -1;
-        // Search board for Exit position
         for (int y = 0; y < m_board.getHeight(); ++y)
         {
             for (int x = 0; x < m_board.getWidth(); ++x)
@@ -239,10 +397,24 @@ void Game::handleMovement(int dx, int dy)
 
         // Re-check death or win after world hazards update
         TileType currentTile = m_board.getTileType(m_player.getX(), m_player.getY());
-        if (currentTile == TileType::Danger)
+        if (currentTile == TileType::Danger || currentTile == TileType::Pit)
         {
-            m_timedOut = false;
-            triggerGameOver();
+            if (m_player.hasShield())
+            {
+                m_player.setShield(false);
+                m_audio.playShieldSound();
+                m_debuffMessage = "! SHIELD ABSORBED HAZARD !";
+                m_debuffMessageTimer = 2.5f;
+                if (currentTile == TileType::Danger)
+                {
+                    m_board.setTileType(m_player.getX(), m_player.getY(), TileType::Empty);
+                }
+            }
+            else
+            {
+                m_timedOut = false;
+                triggerGameOver();
+            }
         }
         else if (currentTile == TileType::Exit)
         {
@@ -362,6 +534,44 @@ void Game::reviseMap()
         if (m_board.getTileType(cx, cy) == TileType::Wall)
         {
             m_board.setTileType(cx, cy, TileType::Empty);
+        }
+    }
+}
+
+void Game::detonateBomb(int bx, int by)
+{
+    m_audio.playBombSound();
+    m_shakeTime = 0.5f;
+    m_shakeMagnitude = 14.0f;
+    m_debuffMessage = "! BOMB BLAST (3x3 CLEARED) !";
+    m_debuffMessageTimer = 2.5f;
+
+    float totalWidth = m_board.getWidth() * Constants::TILE_SIZE + (m_board.getWidth() - 1) * Constants::GRID_SPACING;
+    float totalHeight = m_board.getHeight() * Constants::TILE_SIZE + (m_board.getHeight() - 1) * Constants::GRID_SPACING;
+    float originX = (Constants::SCREEN_WIDTH - totalWidth) / 2.0f;
+    float originY = (Constants::SCREEN_HEIGHT - totalHeight) / 2.0f;
+
+    for (int dy = -1; dy <= 1; ++dy)
+    {
+        for (int dx = -1; dx <= 1; ++dx)
+        {
+            int nx = bx + dx;
+            int ny = by + dy;
+
+            // Do not destroy outer border walls
+            if (nx <= 0 || nx >= m_board.getWidth() - 1 || ny <= 0 || ny >= m_board.getHeight() - 1)
+            {
+                continue;
+            }
+
+            TileType t = m_board.getTileType(nx, ny);
+            if (t != TileType::Exit)
+            {
+                m_board.setTileType(nx, ny, TileType::Empty);
+                spawnExplosion(originX + nx * (Constants::TILE_SIZE + Constants::GRID_SPACING) + 20.0f,
+                               originY + ny * (Constants::TILE_SIZE + Constants::GRID_SPACING) + 20.0f,
+                               { 245, 101, 101, 255 });
+            }
         }
     }
 }
@@ -746,14 +956,31 @@ void Game::update(float deltaTime)
     if (m_state == GameState::Playing)
     {
         m_player.update(deltaTime);
-        m_scoreSystem.updateTime(deltaTime);
 
-        // Fail level immediately if level countdown timer hits zero!
-        if (m_scoreSystem.getTime() >= getLevelTimeLimit())
+        if (m_freezeTimer > 0.0f)
         {
-            m_timedOut = true;
-            triggerGameOver();
+            m_freezeTimer -= deltaTime;
+            if (m_freezeTimer < 0.0f) m_freezeTimer = 0.0f;
         }
+        else
+        {
+            m_scoreSystem.updateTime(deltaTime);
+
+            // Fail level immediately if level countdown timer hits zero!
+            if (m_scoreSystem.getTime() >= getLevelTimeLimit())
+            {
+                m_timedOut = true;
+                triggerGameOver();
+            }
+        }
+
+        // Procedural 8-bit dynamic chiptune background music
+        bool isUrgent = (getLevelTimeLimit() - m_scoreSystem.getTime() < 5.0f && m_freezeTimer <= 0.0f);
+        m_audio.updateBGM(isUrgent, m_state == GameState::Playing);
+    }
+    else
+    {
+        m_audio.stopBGM();
     }
 }
 
@@ -819,7 +1046,8 @@ void Game::render()
                 m_hud.renderPlaying(m_renderer, m_currentLevel, m_scoreSystem.getMoves(),
                                     m_accumulatedScore + m_scoreSystem.calculateScore(m_currentLevel, 0.15f),
                                     m_audio.isSoundOn(), timeLeft, limit, m_saveData.controlMode,
-                                    m_reversedTurns, m_debuffMessage);
+                                    m_reversedTurns, m_debuffMessage,
+                                    m_player.hasShield(), m_player.hasKey(), m_freezeTimer, m_board.getBiomeName());
             }
             break;
         case GameState::Paused:
