@@ -39,8 +39,9 @@ void HUD::init()
     m_btnExit = Button(85.0f, 535.0f, 280.0f, 45.0f, "EXIT GAME");
     m_btnResume = Button(85.0f, 240.0f, 280.0f, 48.0f, "RESUME");
     m_btnNext = Button(115.0f, 440.0f, 220.0f, 55.0f, "NEXT LEVEL");
-    m_btnRestart = Button(115.0f, 510.0f, 220.0f, 50.0f, "TRY AGAIN");
-    m_btnMenu = Button(85.0f, 420.0f, 280.0f, 48.0f, "MAIN MENU");
+    m_btnRestart = Button(85.0f, 400.0f, 280.0f, 46.0f, "TRY AGAIN");
+    m_btnShowPath = Button(85.0f, 455.0f, 280.0f, 46.0f, "SHOW WINNING PATH");
+    m_btnMenu = Button(85.0f, 510.0f, 280.0f, 46.0f, "MAIN MENU");
 
     // Info screen tab buttons
     m_btnTabPlay = Button(15.0f, 65.0f, 135.0f, 36.0f, "HOW TO PLAY");
@@ -337,11 +338,22 @@ void HUD::renderGameOver(SDL_Renderer* renderer, int level, int score, int highS
     float bestW = BitmapFont::getTextWidth(ss.str(), 2.0f);
     BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - bestW) / 2.0f, 340.0f, 2.0f, { 246, 224, 94, 255 });
 
-    m_btnRestart.setPosition(125.0f, 420.0f);
+    m_btnRestart.setPosition(85.0f, 400.0f);
+    m_btnRestart.setSize(280.0f, 46.0f);
+    m_btnRestart.setLabel("TRY AGAIN");
     m_btnRestart.render(renderer, { 72, 187, 120, 255 }); // Green
-    m_btnMenu.setPosition(125.0f, 490.0f);
+
+    m_btnShowPath.setPosition(85.0f, 455.0f);
+    m_btnShowPath.setSize(280.0f, 46.0f);
+    m_btnShowPath.setLabel("SHOW WINNING PATH");
+    m_btnShowPath.render(renderer, { 200, 145, 30, 255 }, { 255, 255, 255, 255 }); // Gold Challenge button
+
+    m_btnMenu.setPosition(85.0f, 510.0f);
+    m_btnMenu.setSize(280.0f, 46.0f);
+    m_btnMenu.setLabel("MAIN MENU");
     m_btnMenu.render(renderer, { 45, 55, 72, 255 }); // Grey-blue
 }
+
 
 void HUD::renderLevelComplete(SDL_Renderer* renderer, int level, int score, int moves, float time, int stars, int highScore)
 {
@@ -565,3 +577,29 @@ void HUD::renderInfo(SDL_Renderer* renderer, int currentTab)
     m_btnBack.setLabel("BACK TO MENU");
     m_btnBack.render(renderer, { 72, 187, 120, 255 });
 }
+
+void HUD::renderPathPreview(SDL_Renderer* renderer, int pathMoves)
+{
+    // Top banner overlay with challenge info
+    SDL_FRect topBar = { 15.0f, 15.0f, static_cast<float>(Constants::SCREEN_WIDTH - 30), 65.0f };
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 0x11, 0x14, 0x1d, 0xee);
+    SDL_RenderFillRect(renderer, &topBar);
+    SDL_SetRenderDrawColor(renderer, 0x2d, 0x35, 0x48, 0xff);
+    SDL_RenderRect(renderer, &topBar);
+
+    std::string routeText = "OPTIMAL ROUTE: " + std::to_string(pathMoves) + " MOVES";
+    float tw1 = BitmapFont::getTextWidth(routeText, 1.8f);
+    BitmapFont::drawText(renderer, routeText, (Constants::SCREEN_WIDTH - tw1) / 2.0f, 24.0f, 1.8f, { 246, 224, 94, 255 });
+
+    std::string subText = "STUDY THE PATH & MASTER THE LEVEL";
+    float tw2 = BitmapFont::getTextWidth(subText, 1.25f);
+    BitmapFont::drawText(renderer, subText, (Constants::SCREEN_WIDTH - tw2) / 2.0f, 52.0f, 1.25f, { 72, 187, 120, 255 });
+
+    // Bottom action button: RETRY CHALLENGE
+    m_btnRestart.setPosition(85.0f, 735.0f);
+    m_btnRestart.setSize(280.0f, 48.0f);
+    m_btnRestart.setLabel("RETRY CHALLENGE");
+    m_btnRestart.render(renderer, { 72, 187, 120, 255 });
+}
+

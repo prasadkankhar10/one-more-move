@@ -1,6 +1,8 @@
 #include "LevelGenerator.h"
 #include "Core/Constants.h"
 #include <iostream>
+#include <set>
+#include <algorithm>
 
 LevelGenerator::LevelGenerator()
 {
@@ -93,44 +95,68 @@ Board LevelGenerator::generate(int level, int seed, int& outPlayerX, int& outPla
             }
         }
 
-        // Run BFS path verification
-        if (board.hasPath(outPlayerX, outPlayerY, outExitX, outExitY))
+        // 1. Initial BFS: Find the Golden Path from Spawn to Exit
+        std::vector<std::pair<int, int>> goldenPath = board.findOptimalPath(outPlayerX, outPlayerY, outExitX, outExitY);
+        if (!goldenPath.empty())
         {
             board.setBiome(level);
 
-            // Collect empty interior tiles (excluding player spawn and exit)
-            std::vector<std::pair<int, int>> emptyTiles;
+            std::set<std::pair<int, int>> goldenSet(goldenPath.begin(), goldenPath.end());
+
+            // Separate empty interior tiles into off-path (hazards/puzzles) and on-path (safe)
+            std::vector<std::pair<int, int>> offPathTiles;
+            std::vector<std::pair<int, int>> onPathTiles;
+
             for (int y = 1; y < rows - 1; ++y)
             {
                 for (int x = 1; x < cols - 1; ++x)
                 {
-                    if (board.getTileType(x, y) == TileType::Empty &&
-                        !(x == outPlayerX && y == outPlayerY) &&
-                        !(x == outExitX && y == outExitY))
+                    if (board.getTileType(x, y) == TileType::Empty)
                     {
-                        emptyTiles.push_back({x, y});
+                        if (x == outPlayerX && y == outPlayerY) continue;
+                        if (x == outExitX && y == outExitY) continue;
+
+                        if (goldenSet.count({x, y}))
+                        {
+                            onPathTiles.push_back({x, y});
+                        }
+                        else
+                        {
+                            offPathTiles.push_back({x, y});
+                        }
                     }
                 }
             }
 
-            std::shuffle(emptyTiles.begin(), emptyTiles.end(), rng);
+            std::shuffle(offPathTiles.begin(), offPathTiles.end(), rng);
+            std::shuffle(onPathTiles.begin(), onPathTiles.end(), rng);
 
-            // 1. Spawn Coins (Level 2+, 1 to 3 coins)
-            if (level >= 2 && !emptyTiles.empty())
+            // 1. Spawn Coins (Level 2+, 1 to 3 coins) - can appear on path or off path
+            if (level >= 2)
             {
-                int coinCount = std::min(static_cast<int>(emptyTiles.size()), 1 + (level % 3));
-                for (int i = 0; i < coinCount && !emptyTiles.empty(); ++i)
+                int coinCount = 1 + (level % 3);
+                for (int i = 0; i < coinCount; ++i)
                 {
-                    auto [cx, cy] = emptyTiles.back();
-                    emptyTiles.pop_back();
-                    board.setTileType(cx, cy, TileType::Coin);
+                    if (!offPathTiles.empty() && (i % 2 == 0 || onPathTiles.empty()))
+                    {
+                        auto [cx, cy] = offPathTiles.back();
+                        offPathTiles.pop_back();
+                        board.setTileType(cx, cy, TileType::Coin);
+                    }
+                    else if (!onPathTiles.empty())
+                    {
+                        auto [cx, cy] = onPathTiles.back();
+                        onPathTiles.pop_back();
+                        board.setTileType(cx, cy, TileType::Coin);
+                    }
                 }
             }
 
-            // 2. Spawn Curse/Debuff tiles (Level 2+, 1 to 3 tiles)
-            if (level >= 2 && !emptyTiles.empty())
+            // 2. Spawn Curse/Debuff tiles (Level 2+) - ONLY ON OFF-PATH TILES!
+            // The Golden Path is never contaminated with mandatory curses!
+            if (level >= 2 && !offPathTiles.empty())
             {
-                int curseCount = std::min(static_cast<int>(emptyTiles.size()), std::min(1 + (level / 4), 3));
+                int curseCount = std::min(static_cast<int>(offPathTiles.size()), std::min(1 + (level / 4), 3));
                 DebuffType debuffs[] = {
                     DebuffType::ReverseControls,
                     DebuffType::TeleportSpawn,
@@ -138,87 +164,69 @@ Board LevelGenerator::generate(int level, int seed, int& outPlayerX, int& outPla
                     DebuffType::TimePenalty
                 };
 
-                for (int i = 0; i < curseCount && !emptyTiles.empty(); ++i)
+                for (int i = 0; i < curseCount && !offPathTiles.empty(); ++i)
                 {
-                    auto [cx, cy] = emptyTiles.back();
-                    emptyTiles.pop_back();
+                    auto [cx, cy] = offPathTiles.back();
+                    offPathTiles.pop_back();
 
                     board.setTileType(cx, cy, TileType::Curse);
                     DebuffType chosenDebuff = debuffs[rng() % 4];
                     board.setDebuffType(cx, cy, chosenDebuff);
                 }
 
-                // Spawn 1 Defuse tile on Level 3+
-                if (level >= 3 && !emptyTiles.empty())
+                // Spawn 1 Defuse tile on Level 3+ (cures curse & disarms traps)
+                if (level >= 3 && !offPathTiles.empty())
                 {
-                    auto [dx, dy] = emptyTiles.back();
-                    emptyTiles.pop_back();
+                    auto [dx, dy] = offPathTiles.back();
+                    offPathTiles.pop_back();
                     board.setTileType(dx, dy, TileType::Defuse);
                 }
             }
 
-            // 3. Spawn Crumbling floor tiles (Level 3+, 1 to 3 tiles)
-            if (level >= 3 && !emptyTiles.empty())
+            // 3. Spawn Crumbling floor tiles (Level 3+) - ONLY ON OFF-PATH TILES!
+            if (level >= 3 && !offPathTiles.empty())
             {
-                int crumbCount = std::min(static_cast<int>(emptyTiles.size()), 1 + (level / 4));
-                for (int i = 0; i < crumbCount && !emptyTiles.empty(); ++i)
+                int crumbCount = std::min(static_cast<int>(offPathTiles.size()), 1 + (level / 4));
+                for (int i = 0; i < crumbCount && !offPathTiles.empty(); ++i)
                 {
-                    auto [cx, cy] = emptyTiles.back();
-                    emptyTiles.pop_back();
+                    auto [cx, cy] = offPathTiles.back();
+                    offPathTiles.pop_back();
                     board.setTileType(cx, cy, TileType::Crumbling);
                 }
             }
 
             // 4. Spawn Key & Gate (Level 4+, 1 pair)
-            if (level >= 4 && emptyTiles.size() >= 4)
+            if (level >= 4 && offPathTiles.size() >= 2)
             {
-                // Find empty tile adjacent or close to exit for Gate
-                int gateX = -1, gateY = -1;
-                int keyX = -1, keyY = -1;
+                auto [kx, ky] = offPathTiles.back();
+                offPathTiles.pop_back();
+                auto [gx, gy] = offPathTiles.back();
+                offPathTiles.pop_back();
 
-                // Pick key from back
-                keyX = emptyTiles.back().first;
-                keyY = emptyTiles.back().second;
-                emptyTiles.pop_back();
-
-                // Candidate gate
-                gateX = emptyTiles.back().first;
-                gateY = emptyTiles.back().second;
-                emptyTiles.pop_back();
-
-                board.setTileType(gateX, gateY, TileType::Gate);
-                // Verify that player can reach the key while gate is locked
-                if (board.hasPath(outPlayerX, outPlayerY, keyX, keyY))
-                {
-                    board.setTileType(keyX, keyY, TileType::Key);
-                }
-                else
-                {
-                    // Revert gate and key to empty if key is blocked
-                    board.setTileType(gateX, gateY, TileType::Empty);
-                    board.setTileType(keyX, keyY, TileType::Empty);
-                }
+                // Gate protects an off-path treasure chamber
+                board.setTileType(gx, gy, TileType::Gate);
+                board.setTileType(kx, ky, TileType::Key);
             }
 
-            // 5. Spawn Ice tiles (Level 5+, 2 to 4 slick tiles)
-            if (level >= 5 && !emptyTiles.empty())
+            // 5. Spawn Ice tiles (Level 5+) - off-path slick tiles
+            if (level >= 5 && !offPathTiles.empty())
             {
-                int iceCount = std::min(static_cast<int>(emptyTiles.size()), 2 + (level % 3));
-                for (int i = 0; i < iceCount && !emptyTiles.empty(); ++i)
+                int iceCount = std::min(static_cast<int>(offPathTiles.size()), 2 + (level % 3));
+                for (int i = 0; i < iceCount && !offPathTiles.empty(); ++i)
                 {
-                    auto [ix, iy] = emptyTiles.back();
-                    emptyTiles.pop_back();
+                    auto [ix, iy] = offPathTiles.back();
+                    offPathTiles.pop_back();
                     board.setTileType(ix, iy, TileType::Ice);
                 }
             }
 
-            // 6. Spawn Portals (Level 5+, 1 pair)
-            if (level >= 5 && emptyTiles.size() >= 2 && (level % 2 == 1))
+            // 6. Spawn Portals (Level 5+, 1 pair on odd levels)
+            if (level >= 5 && offPathTiles.size() >= 2 && (level % 2 == 1))
             {
-                auto [p1x, p1y] = emptyTiles.back();
-                emptyTiles.pop_back();
-                auto [p2x, p2y] = emptyTiles.back();
-                emptyTiles.pop_back();
+                auto [p1x, p1y] = offPathTiles.back();
+                offPathTiles.pop_back();
+                auto [p2x, p2y] = offPathTiles.back();
+                offPathTiles.pop_back();
 
                 Tile t1{ TileType::Portal, true, DebuffType::None, p2x, p2y, 0 };
                 Tile t2{ TileType::Portal, true, DebuffType::None, p1x, p1y, 0 };
@@ -227,31 +235,39 @@ Board LevelGenerator::generate(int level, int seed, int& outPlayerX, int& outPla
             }
 
             // 7. Power-ups: Shield & TimeFreeze (Level 6+)
-            if (level >= 6 && !emptyTiles.empty())
+            if (level >= 6 && !offPathTiles.empty())
             {
-                auto [sx, sy] = emptyTiles.back();
-                emptyTiles.pop_back();
+                auto [sx, sy] = offPathTiles.back();
+                offPathTiles.pop_back();
                 board.setTileType(sx, sy, TileType::Shield);
 
-                if (!emptyTiles.empty())
+                if (!offPathTiles.empty())
                 {
-                    auto [tx, ty] = emptyTiles.back();
-                    emptyTiles.pop_back();
+                    auto [tx, ty] = offPathTiles.back();
+                    offPathTiles.pop_back();
                     board.setTileType(tx, ty, TileType::TimeFreeze);
                 }
             }
 
             // 8. Bomb (Level 7+, 1 bomb)
-            if (level >= 7 && !emptyTiles.empty())
+            if (level >= 7 && !offPathTiles.empty())
             {
-                auto [bx, by] = emptyTiles.back();
-                emptyTiles.pop_back();
+                auto [bx, by] = offPathTiles.back();
+                offPathTiles.pop_back();
                 board.setTileType(bx, by, TileType::Bomb);
             }
 
-            std::cout << "[Generator] Successfully generated solvable level " << level 
-                      << " with seed " << seed << " in " << attempts << " attempts." << std::endl;
-            return board;
+            // Virtual Solver Verification:
+            // Calculate final optimal path from player spawn to exit on the decorated board
+            std::vector<std::pair<int, int>> finalOptimalPath = board.findOptimalPath(outPlayerX, outPlayerY, outExitX, outExitY);
+            if (!finalOptimalPath.empty())
+            {
+                board.setOptimalPath(finalOptimalPath);
+                std::cout << "[Generator] Successfully generated solvable level " << level 
+                          << " with seed " << seed << " in " << attempts << " attempts. Optimal moves: " 
+                          << finalOptimalPath.size() - 1 << std::endl;
+                return board;
+            }
         }
     }
 
@@ -283,5 +299,8 @@ Board LevelGenerator::generate(int level, int seed, int& outPlayerX, int& outPla
         }
     }
 
+    std::vector<std::pair<int, int>> fallbackPath = board.findOptimalPath(outPlayerX, outPlayerY, outExitX, outExitY);
+    board.setOptimalPath(fallbackPath);
     return board;
 }
+

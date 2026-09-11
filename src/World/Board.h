@@ -22,6 +22,10 @@ public:
     const Tile& getTile(int x, int y) const;
     void setTile(int x, int y, const Tile& tile);
     bool hasPath(int startX, int startY, int targetX, int targetY) const;
+    std::vector<std::pair<int, int>> findOptimalPath(int startX, int startY, int targetX, int targetY) const;
+    void setOptimalPath(const std::vector<std::pair<int, int>>& path) { m_optimalPath = path; }
+    const std::vector<std::pair<int, int>>& getOptimalPath() const { return m_optimalPath; }
+    void renderOptimalPath(SDL_Renderer* renderer) const;
 
     int getWidth() const { return m_width; }
     int getHeight() const { return m_height; }
@@ -38,8 +42,10 @@ private:
     int m_height = 0;
     int m_biome = 0;
     std::vector<std::vector<Tile>> m_grid;
+    std::vector<std::pair<int, int>> m_optimalPath;
 
     // Grid screen positions
     float m_originX = 0.0f;
     float m_originY = 0.0f;
 };
+

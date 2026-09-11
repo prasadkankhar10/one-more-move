@@ -1,8 +1,11 @@
 #include "Board.h"
 #include "Core/Constants.h"
+#include "UI/BitmapFont.h"
 #include <iostream>
 #include <queue>
 #include <utility>
+#include <cmath>
+#include <algorithm>
 
 Board::Board()
 {
@@ -513,4 +516,187 @@ bool Board::hasPath(int startX, int startY, int targetX, int targetY) const
 
     return false;
 }
+
+std::vector<std::pair<int, int>> Board::findOptimalPath(int startX, int startY, int targetX, int targetY) const
+{
+    std::vector<std::pair<int, int>> path;
+    if (!isValidPosition(startX, startY) || !isValidPosition(targetX, targetY))
+    {
+        return path;
+    }
+
+    if (startX == targetX && startY == targetY)
+    {
+        path.push_back({startX, startY});
+        return path;
+    }
+
+    std::queue<std::pair<int, int>> q;
+    std::vector<std::vector<bool>> visited(m_height, std::vector<bool>(m_width, false));
+    std::vector<std::vector<std::pair<int, int>>> parent(m_height, std::vector<std::pair<int, int>>(m_width, {-1, -1}));
+
+    q.push({startX, startY});
+    visited[startY][startX] = true;
+
+    int dx[] = { 0, 0, -1, 1 };
+    int dy[] = { -1, 1, 0, 0 };
+    bool found = false;
+
+    while (!q.empty())
+    {
+        auto [cx, cy] = q.front();
+        q.pop();
+
+        if (cx == targetX && cy == targetY)
+        {
+            found = true;
+            break;
+        }
+
+        // Check if current tile is a portal
+        const Tile& curTile = m_grid[cy][cx];
+        if (curTile.type == TileType::Portal && isValidPosition(curTile.portalTargetX, curTile.portalTargetY))
+        {
+            int px = curTile.portalTargetX;
+            int py = curTile.portalTargetY;
+            if (!visited[py][px])
+            {
+                visited[py][px] = true;
+                parent[py][px] = {cx, cy};
+                q.push({px, py});
+            }
+        }
+
+        for (int i = 0; i < 4; ++i)
+        {
+            int nx = cx + dx[i];
+            int ny = cy + dy[i];
+
+            if (isValidPosition(nx, ny) && !visited[ny][nx])
+            {
+                TileType type = m_grid[ny][nx].type;
+                bool isImpassable = (type == TileType::Wall || type == TileType::Danger || 
+                                     type == TileType::Pit || type == TileType::Gate);
+
+                if (!isImpassable)
+                {
+                    visited[ny][nx] = true;
+                    parent[ny][nx] = {cx, cy};
+                    q.push({nx, ny});
+                }
+            }
+        }
+    }
+
+    if (!found)
+    {
+        return path;
+    }
+
+    // Reconstruct path
+    std::pair<int, int> curr = {targetX, targetY};
+    while (curr.first != -1 && curr.second != -1)
+    {
+        path.push_back(curr);
+        if (curr.first == startX && curr.second == startY)
+        {
+            break;
+        }
+        curr = parent[curr.second][curr.first];
+    }
+
+    std::reverse(path.begin(), path.end());
+    return path;
+}
+
+void Board::renderOptimalPath(SDL_Renderer* renderer) const
+{
+    if (m_optimalPath.empty()) return;
+
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
+    // 1. Draw glowing connecting lines between path steps
+    for (size_t i = 0; i + 1 < m_optimalPath.size(); ++i)
+    {
+        auto [x1, y1] = m_optimalPath[i];
+        auto [x2, y2] = m_optimalPath[i + 1];
+
+        // Skip drawing lines across portal wormholes
+        if (std::abs(x1 - x2) > 1 || std::abs(y1 - y2) > 1)
+        {
+            continue;
+        }
+
+        SDL_FRect r1 = getTileRect(x1, y1);
+        SDL_FRect r2 = getTileRect(x2, y2);
+
+        float cx1 = r1.x + r1.w / 2.0f;
+        float cy1 = r1.y + r1.h / 2.0f;
+        float cx2 = r2.x + r2.w / 2.0f;
+        float cy2 = r2.y + r2.h / 2.0f;
+
+        // Wide golden laser track
+        SDL_SetRenderDrawColor(renderer, 246, 224, 94, 200);
+        SDL_RenderLine(renderer, cx1, cy1, cx2, cy2);
+        SDL_RenderLine(renderer, cx1 + 1.0f, cy1, cx2 + 1.0f, cy2);
+        SDL_RenderLine(renderer, cx1 - 1.0f, cy1, cx2 - 1.0f, cy2);
+        SDL_RenderLine(renderer, cx1, cy1 + 1.0f, cx2, cy2 + 1.0f);
+        SDL_RenderLine(renderer, cx1, cy1 - 1.0f, cx2, cy2 - 1.0f);
+    }
+
+    // 2. Draw glowing footprint pads on each tile in the path
+    for (size_t i = 0; i < m_optimalPath.size(); ++i)
+    {
+        auto [x, y] = m_optimalPath[i];
+        SDL_FRect rect = getTileRect(x, y);
+
+        // Highlight box
+        SDL_FRect pad = { rect.x + 6.0f, rect.y + 6.0f, rect.w - 12.0f, rect.h - 12.0f };
+        SDL_SetRenderDrawColor(renderer, 246, 224, 94, 70);
+        SDL_RenderFillRect(renderer, &pad);
+
+        SDL_SetRenderDrawColor(renderer, 255, 230, 100, 220);
+        SDL_RenderRect(renderer, &pad);
+
+        // Draw step number on the pad (except start 0 which has hero)
+        if (i > 0 && i + 1 < m_optimalPath.size())
+        {
+            std::string numStr = std::to_string(i);
+            float nw = BitmapFont::getTextWidth(numStr, 1.2f);
+            float tx = rect.x + (rect.w - nw) / 2.0f;
+            float ty = rect.y + (rect.h - 8.0f * 1.2f) / 2.0f;
+            BitmapFont::drawText(renderer, numStr, tx, ty, 1.2f, { 255, 255, 255, 255 });
+        }
+    }
+
+    // 3. Animated ghost orb traversing the path
+    Uint32 ticks = SDL_GetTicks();
+    float totalSteps = static_cast<float>(m_optimalPath.size());
+    if (totalSteps > 1.0f)
+    {
+        float cycleTime = totalSteps * 250.0f; // 250ms per step
+        float progress = std::fmod(static_cast<float>(ticks), cycleTime) / cycleTime;
+        float floatIndex = progress * (totalSteps - 1.0f);
+        int idxA = static_cast<int>(floatIndex);
+        int idxB = std::min(idxA + 1, static_cast<int>(m_optimalPath.size() - 1));
+        float t = floatIndex - idxA;
+
+        SDL_FRect rA = getTileRect(m_optimalPath[idxA].first, m_optimalPath[idxA].second);
+        SDL_FRect rB = getTileRect(m_optimalPath[idxB].first, m_optimalPath[idxB].second);
+
+        float orbX = (rA.x + rA.w / 2.0f) * (1.0f - t) + (rB.x + rB.w / 2.0f) * t;
+        float orbY = (rA.y + rA.h / 2.0f) * (1.0f - t) + (rB.y + rB.h / 2.0f) * t;
+
+        // Draw pulsating ghost orb
+        float pulseSize = 7.0f + 2.5f * std::sin(ticks / 100.0f);
+        SDL_FRect orb = { orbX - pulseSize, orbY - pulseSize, pulseSize * 2.0f, pulseSize * 2.0f };
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 240);
+        SDL_RenderFillRect(renderer, &orb);
+
+        SDL_FRect halo = { orbX - pulseSize - 3.0f, orbY - pulseSize - 3.0f, (pulseSize + 3.0f) * 2.0f, (pulseSize + 3.0f) * 2.0f };
+        SDL_SetRenderDrawColor(renderer, 246, 224, 94, 150);
+        SDL_RenderRect(renderer, &halo);
+    }
+}
+
 

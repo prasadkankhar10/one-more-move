@@ -40,6 +40,7 @@ private:
 
     // Gameplay commands
     void startNewGame(bool fromLevelOne = false);
+    void restartCurrentLevel();
     void loadNextLevel();
     void handleMovement(int dx, int dy);
     void handleMouseClick(float mx, float my);

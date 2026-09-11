@@ -138,7 +138,30 @@ void Game::startNewGame(bool fromLevelOne)
     m_state = GameState::Playing;
 }
 
+void Game::restartCurrentLevel()
+{
+    m_particles.clear();
+    m_worldSystem.reset();
+    m_scoreSystem.resetLevel();
+    m_reversedTurns = 0;
+    m_debuffMessage = "";
+    m_debuffMessageTimer = 0.0f;
+    m_timedOut = false;
+    m_freezeTimer = 0.0f;
+    m_lastTime = SDL_GetTicks();
+
+    // Regenerate the exact same level layout using the stored seed
+    int px, py, ex, ey;
+    m_board = m_generator.generate(m_currentLevel, m_currentSeed, px, py, ex, ey);
+    m_player.reset(px, py);
+    m_spawnX = px;
+    m_spawnY = py;
+
+    m_state = GameState::Playing;
+}
+
 void Game::loadNextLevel()
+
 {
     m_currentLevel++;
     m_particles.clear();
@@ -585,10 +608,15 @@ void Game::detonateBomb(int bx, int by)
 
 float Game::getLevelTimeLimit() const
 {
-    if (m_currentLevel <= 3) return 25.0f;
-    if (m_currentLevel <= 6) return 30.0f;
-    return 35.0f;
+    float pathSteps = static_cast<float>(m_board.getOptimalPath().size());
+    if (pathSteps < 6.0f) pathSteps = 6.0f;
+
+    // Guaranteed time budget: 1.4 seconds per optimal step + 7.0 seconds buffer
+    float calculated = (pathSteps * 1.4f) + 7.0f;
+    float minLimit = (m_currentLevel <= 3) ? 22.0f : ((m_currentLevel <= 6) ? 28.0f : 32.0f);
+    return std::max(calculated, minLimit);
 }
+
 
 void Game::triggerGameOver()
 {
@@ -818,7 +846,12 @@ void Game::handleMouseClick(float mx, float my)
             if (m_hud.m_btnRestart.checkClick(mx, my))
             {
                 m_audio.playMoveSound();
-                startNewGame();
+                restartCurrentLevel();
+            }
+            else if (m_hud.m_btnShowPath.checkClick(mx, my))
+            {
+                m_audio.playWinSound();
+                m_state = GameState::PathPreview;
             }
             else if (m_hud.m_btnMenu.checkClick(mx, my))
             {
@@ -826,6 +859,13 @@ void Game::handleMouseClick(float mx, float my)
                 m_state = GameState::MainMenu;
             }
             break;
+
+        case GameState::PathPreview:
+            // Tapping anywhere or clicking retry challenge restarts the level
+            m_audio.playMoveSound();
+            restartCurrentLevel();
+            break;
+
 
         case GameState::LevelComplete:
             if (m_hud.m_btnNext.checkClick(mx, my))
@@ -1068,18 +1108,25 @@ void Game::render()
     float renderOriginX = originX + shakeX;
     float renderOriginY = originY + shakeY;
 
-    // Render Grid & Entities (Only when Playing, Paused, LevelComplete, or GameOver)
+    // Render Grid & Entities (Only when Playing, Paused, LevelComplete, GameOver, or PathPreview)
     if (m_state != GameState::MainMenu)
     {
         // Render Board with shake offsets
         m_board.render(m_renderer, shakeX, shakeY);
     }
 
+    // Render Path Preview trail when player requests solution
+    if (m_state == GameState::PathPreview)
+    {
+        m_board.renderOptimalPath(m_renderer);
+    }
+
     // Render Player
-    if (m_state == GameState::Playing || m_state == GameState::Paused || m_state == GameState::LevelComplete)
+    if (m_state == GameState::Playing || m_state == GameState::Paused || m_state == GameState::LevelComplete || m_state == GameState::PathPreview)
     {
         m_player.render(m_renderer, renderOriginX, renderOriginY);
     }
+
 
     // Render Particles
     for (const auto& p : m_particles)
@@ -1129,7 +1176,15 @@ void Game::render()
         case GameState::Info:
             m_hud.renderInfo(m_renderer, m_infoTab);
             break;
+        case GameState::PathPreview:
+            {
+                int pathMoves = static_cast<int>(m_board.getOptimalPath().size());
+                if (pathMoves > 0) pathMoves -= 1;
+                m_hud.renderPathPreview(m_renderer, pathMoves);
+            }
+            break;
     }
+
 
     // Present rendering
     SDL_RenderPresent(m_renderer);
