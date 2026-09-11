@@ -19,6 +19,7 @@ public:
     void renderPaused(SDL_Renderer* renderer);
     void renderGameOver(SDL_Renderer* renderer, int level, int score, int highScore, bool timedOut = false);
     void renderLevelComplete(SDL_Renderer* renderer, int level, int score, int moves, float time, int stars, int highScore);
+    void renderInfo(SDL_Renderer* renderer, int currentTab);
 
     // Getters for touch buttons (so Game class can check tap inputs)
     const Button& getBtnUp() const { return m_btnUp; }
@@ -38,6 +39,15 @@ public:
     Button m_btnMenu; // Back to menu button used on multiple screens
     Button m_btnExit; // Clean app quit button
     Button m_btnControls; // Control mode toggle
+    Button m_btnGiveUp; // Concede current level
+    Button m_btnRestartRun; // Restart entire run from Level 1
+    Button m_btnInfo; // Open How To Play / Info
+    Button m_btnBack; // Back button on info screen
+
+    // Info tabs
+    Button m_btnTabPlay;
+    Button m_btnTabTiles;
+    Button m_btnTabDev;
 
 private:
     // Directional pad buttons

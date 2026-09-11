@@ -15,9 +15,11 @@ HUD::~HUD()
 void HUD::init()
 {
     // Initialize gameplay headers
-    m_btnPause = Button(15.0f, 12.0f, 42.0f, 32.0f, "II");
-    m_btnSound = Button(393.0f, 12.0f, 42.0f, 32.0f, "VOL");
-    m_btnControls = Button(15.0f, 48.0f, 80.0f, 26.0f, "BOTH");
+    m_btnPause = Button(10.0f, 12.0f, 36.0f, 30.0f, "II");
+    m_btnGiveUp = Button(50.0f, 12.0f, 54.0f, 30.0f, "GIVE");
+    m_btnRestartRun = Button(108.0f, 12.0f, 54.0f, 30.0f, "LVL 1");
+    m_btnSound = Button(404.0f, 12.0f, 36.0f, 30.0f, "VOL");
+    m_btnControls = Button(10.0f, 48.0f, 75.0f, 26.0f, "BOTH");
 
     // Initialize direction pad (D-pad) for mobile touch
     float dpadCenterX = Constants::SCREEN_WIDTH / 2.0f;
@@ -32,12 +34,19 @@ void HUD::init()
     m_btnRight = Button(dpadCenterX + (btnW / 2.0f) + gap, dpadCenterY - (btnH / 2.0f), btnW, btnH, "RIGHT");
 
     // Initialize overlay menu buttons
-    m_btnPlay = Button(85.0f, 390.0f, 280.0f, 55.0f, "PLAY GAME");
-    m_btnExit = Button(85.0f, 530.0f, 280.0f, 45.0f, "EXIT GAME");
-    m_btnResume = Button(115.0f, 300.0f, 220.0f, 50.0f, "RESUME");
+    m_btnPlay = Button(85.0f, 365.0f, 280.0f, 50.0f, "PLAY GAME");
+    m_btnInfo = Button(85.0f, 425.0f, 280.0f, 45.0f, "HOW TO PLAY & INFO");
+    m_btnExit = Button(85.0f, 535.0f, 280.0f, 45.0f, "EXIT GAME");
+    m_btnResume = Button(85.0f, 240.0f, 280.0f, 48.0f, "RESUME");
     m_btnNext = Button(115.0f, 440.0f, 220.0f, 55.0f, "NEXT LEVEL");
     m_btnRestart = Button(115.0f, 510.0f, 220.0f, 50.0f, "TRY AGAIN");
-    m_btnMenu = Button(115.0f, 580.0f, 220.0f, 50.0f, "MAIN MENU");
+    m_btnMenu = Button(85.0f, 420.0f, 280.0f, 48.0f, "MAIN MENU");
+
+    // Info screen tab buttons
+    m_btnTabPlay = Button(15.0f, 65.0f, 135.0f, 36.0f, "HOW TO PLAY");
+    m_btnTabTiles = Button(157.0f, 65.0f, 135.0f, 36.0f, "ALL TILES");
+    m_btnTabDev = Button(299.0f, 65.0f, 135.0f, 36.0f, "DEVELOPER");
+    m_btnBack = Button(115.0f, 735.0f, 220.0f, 45.0f, "BACK TO MENU");
 }
 
 void HUD::renderPlaying(SDL_Renderer* renderer, int level, int moves, int score, bool soundOn, float timeLeft, float timeLimit, int controlMode, int reversedTurns, const std::string& debuffMsg, bool hasShield, bool hasKey, float freezeTime, const std::string& biomeName)
@@ -49,47 +58,62 @@ void HUD::renderPlaying(SDL_Renderer* renderer, int level, int moves, int score,
     SDL_SetRenderDrawColor(renderer, 0x22, 0x27, 0x35, 0xff);
     SDL_RenderLine(renderer, 0.0f, 82.0f, static_cast<float>(Constants::SCREEN_WIDTH), 82.0f);
 
-    // Row 1 (y = 18): Buttons + Level + Moves + Biome hint
+    // Row 1 (y = 12): [II] [GIVE] [LVL 1] ... L:X ... M:X ... [SHLD] [KEY] ... [VOL]
+    m_btnPause.setPosition(10.0f, 12.0f);
+    m_btnPause.setSize(36.0f, 30.0f);
     m_btnPause.render(renderer, { 45, 55, 72, 255 });
-    m_btnSound.render(renderer, soundOn ? SDL_Color{ 45, 55, 72, 255 } : SDL_Color{ 110, 45, 45, 255 });
+
+    m_btnGiveUp.setPosition(50.0f, 12.0f);
+    m_btnGiveUp.setSize(54.0f, 30.0f);
+    m_btnGiveUp.setLabel("GIVE");
+    m_btnGiveUp.render(renderer, { 140, 45, 45, 255 }, { 255, 200, 200, 255 });
+
+    m_btnRestartRun.setPosition(108.0f, 12.0f);
+    m_btnRestartRun.setSize(54.0f, 30.0f);
+    m_btnRestartRun.setLabel("LVL 1");
+    m_btnRestartRun.render(renderer, { 160, 90, 30, 255 }, { 255, 230, 180, 255 });
 
     std::stringstream ss;
-    ss << "LVL: " << level;
-    BitmapFont::drawText(renderer, ss.str(), 68.0f, 20.0f, 1.4f, { 255, 255, 255, 255 });
+    ss << "L:" << level;
+    BitmapFont::drawText(renderer, ss.str(), 168.0f, 20.0f, 1.4f, { 255, 255, 255, 255 });
 
     ss.str("");
-    ss << "MOVES: " << moves;
-    BitmapFont::drawText(renderer, ss.str(), 165.0f, 20.0f, 1.4f, { 255, 255, 255, 255 });
+    ss << "M:" << moves;
+    BitmapFont::drawText(renderer, ss.str(), 215.0f, 20.0f, 1.4f, { 255, 255, 255, 255 });
 
-    // Inventory indicators in Row 1 right side
-    float badgeX = 270.0f;
+    // Inventory indicators in Row 1
+    float badgeX = 280.0f;
     if (hasShield)
     {
-        SDL_FRect sBadge = { badgeX, 16.0f, 50.0f, 20.0f };
+        SDL_FRect sBadge = { badgeX, 16.0f, 48.0f, 22.0f };
         SDL_SetRenderDrawColor(renderer, 0x2b, 0x6c, 0xb0, 0xff);
         SDL_RenderFillRect(renderer, &sBadge);
-        BitmapFont::drawText(renderer, "SHLD", badgeX + 4.0f, 18.0f, 1.2f, { 255, 255, 255, 255 });
-        badgeX += 54.0f;
+        BitmapFont::drawText(renderer, "SHLD", badgeX + 4.0f, 19.0f, 1.1f, { 255, 255, 255, 255 });
+        badgeX += 52.0f;
     }
     if (hasKey)
     {
-        SDL_FRect kBadge = { badgeX, 16.0f, 40.0f, 20.0f };
+        SDL_FRect kBadge = { badgeX, 16.0f, 38.0f, 22.0f };
         SDL_SetRenderDrawColor(renderer, 0xd6, 0x9e, 0x2e, 0xff);
         SDL_RenderFillRect(renderer, &kBadge);
-        BitmapFont::drawText(renderer, "KEY", badgeX + 5.0f, 18.0f, 1.2f, { 255, 255, 255, 255 });
-        badgeX += 44.0f;
+        BitmapFont::drawText(renderer, "KEY", badgeX + 4.0f, 19.0f, 1.1f, { 255, 255, 255, 255 });
+        badgeX += 42.0f;
     }
+
+    m_btnSound.setPosition(404.0f, 12.0f);
+    m_btnSound.setSize(36.0f, 30.0f);
+    m_btnSound.render(renderer, soundOn ? SDL_Color{ 45, 55, 72, 255 } : SDL_Color{ 110, 45, 45, 255 });
 
     // Row 2 (y = 52): Control mode toggle button + Score + Time bar
     std::string ctrlLabel = (controlMode == 0) ? "BOTH" : (controlMode == 1 ? "SWIPE" : "DPAD");
-    m_btnControls.setPosition(15.0f, 48.0f);
+    m_btnControls.setPosition(10.0f, 48.0f);
     m_btnControls.setSize(75.0f, 26.0f);
     m_btnControls.setLabel(ctrlLabel);
     m_btnControls.render(renderer, { 35, 42, 58, 255 }, { 160, 174, 192, 255 });
 
     ss.str("");
     ss << "PTS: " << score;
-    BitmapFont::drawText(renderer, ss.str(), 100.0f, 54.0f, 1.4f, { 104, 219, 120, 255 }); // Green score
+    BitmapFont::drawText(renderer, ss.str(), 95.0f, 54.0f, 1.4f, { 104, 219, 120, 255 }); // Green score
 
     // Time text & progress bar
     if (timeLeft < 0.0f) timeLeft = 0.0f;
@@ -106,12 +130,12 @@ void HUD::renderPlaying(SDL_Renderer* renderer, int level, int moves, int score,
     bool isLowTime = (timeLeft < 5.0f && freezeTime <= 0.0f);
     SDL_Color timeColor = (freezeTime > 0.0f) ? SDL_Color{ 100, 220, 255, 255 } : 
                          (isLowTime ? SDL_Color{ 245, 101, 101, 255 } : SDL_Color{ 246, 224, 94, 255 });
-    BitmapFont::drawText(renderer, timeBuffer, 225.0f, 54.0f, 1.3f, timeColor);
+    BitmapFont::drawText(renderer, timeBuffer, 220.0f, 54.0f, 1.3f, timeColor);
 
     // Time Progress Bar
-    float barX = 295.0f;
+    float barX = 290.0f;
     float barY = 56.0f;
-    float barW = 90.0f;
+    float barW = 85.0f;
     float barH = 10.0f;
 
     SDL_FRect bgBar = { barX, barY, barW, barH };
@@ -180,18 +204,18 @@ void HUD::renderMainMenu(SDL_Renderer* renderer, int highScore, int highestLevel
     float titleX = (Constants::SCREEN_WIDTH - titleWidth) / 2.0f;
 
     // Drop shadow
-    BitmapFont::drawText(renderer, title, titleX + 3.0f, 153.0f, scale, { 0, 0, 0, 180 });
+    BitmapFont::drawText(renderer, title, titleX + 3.0f, 133.0f, scale, { 0, 0, 0, 180 });
     // Title Gold
-    BitmapFont::drawText(renderer, title, titleX, 150.0f, scale, { 246, 224, 94, 255 });
+    BitmapFont::drawText(renderer, title, titleX, 130.0f, scale, { 246, 224, 94, 255 });
 
     // Subtitle
     std::string sub = "TACTICAL ESCAPE";
     float subWidth = sub.length() * 8.0f * 1.5f;
     float subX = (Constants::SCREEN_WIDTH - subWidth) / 2.0f;
-    BitmapFont::drawText(renderer, sub, subX, 195.0f, 1.5f, { 160, 174, 192, 255 });
+    BitmapFont::drawText(renderer, sub, subX, 175.0f, 1.5f, { 160, 174, 192, 255 });
 
     // Stats Card
-    SDL_FRect statCard = { 55.0f, 235.0f, 340.0f, 120.0f };
+    SDL_FRect statCard = { 55.0f, 215.0f, 340.0f, 115.0f };
     SDL_SetRenderDrawColor(renderer, 0x16, 0x1a, 0x24, 0xff);
     SDL_RenderFillRect(renderer, &statCard);
     SDL_SetRenderDrawColor(renderer, 0x2d, 0x35, 0x48, 0xff);
@@ -200,25 +224,30 @@ void HUD::renderMainMenu(SDL_Renderer* renderer, int highScore, int highestLevel
     std::stringstream ss;
     ss << "UNLOCKED LEVEL: " << highestLevel;
     float sw1 = ss.str().length() * 8.0f * 1.6f;
-    BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - sw1) / 2.0f, 260.0f, 1.6f, { 255, 255, 255, 255 });
+    BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - sw1) / 2.0f, 240.0f, 1.6f, { 255, 255, 255, 255 });
 
     ss.str("");
     ss << "BEST SCORE: " << highScore;
     float sw2 = ss.str().length() * 8.0f * 1.8f;
-    BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - sw2) / 2.0f, 300.0f, 1.8f, { 104, 219, 120, 255 });
+    BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - sw2) / 2.0f, 280.0f, 1.8f, { 104, 219, 120, 255 });
 
     // Menu Buttons
-    m_btnPlay.setPosition(85.0f, 390.0f);
-    m_btnPlay.setSize(280.0f, 55.0f);
+    m_btnPlay.setPosition(85.0f, 365.0f);
+    m_btnPlay.setSize(280.0f, 50.0f);
     m_btnPlay.render(renderer, { 72, 187, 120, 255 }); // Bright Green button
 
+    m_btnInfo.setPosition(85.0f, 425.0f);
+    m_btnInfo.setSize(280.0f, 45.0f);
+    m_btnInfo.setLabel("HOW TO PLAY & INFO");
+    m_btnInfo.render(renderer, { 43, 108, 176, 255 }); // Blue info button
+
     std::string ctrlText = (controlMode == 0) ? "CONTROLS: BOTH" : (controlMode == 1 ? "CONTROLS: SWIPE" : "CONTROLS: DPAD");
-    m_btnControls.setPosition(85.0f, 465.0f);
+    m_btnControls.setPosition(85.0f, 480.0f);
     m_btnControls.setSize(280.0f, 45.0f);
     m_btnControls.setLabel(ctrlText);
     m_btnControls.render(renderer, { 45, 55, 72, 255 }, { 255, 255, 255, 255 });
 
-    m_btnExit.setPosition(85.0f, 530.0f);
+    m_btnExit.setPosition(85.0f, 535.0f);
     m_btnExit.setSize(280.0f, 45.0f);
     m_btnExit.setLabel("EXIT GAME");
     m_btnExit.render(renderer, { 150, 45, 45, 255 }, { 255, 255, 255, 255 }); // Crimson
@@ -229,22 +258,35 @@ void HUD::renderPaused(SDL_Renderer* renderer)
     // Dark transparent overlay
     SDL_FRect overlay = { 0.0f, 0.0f, static_cast<float>(Constants::SCREEN_WIDTH), static_cast<float>(Constants::SCREEN_HEIGHT) };
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xcf); // Dark overlay
+    SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xd8); // Dark overlay
     SDL_RenderFillRect(renderer, &overlay);
 
-    BitmapFont::drawText(renderer, "GAME PAUSED", 110.0f, 230.0f, 2.5f, { 255, 255, 255, 255 });
+    BitmapFont::drawText(renderer, "GAME PAUSED", 110.0f, 180.0f, 2.5f, { 255, 255, 255, 255 });
 
-    m_btnResume.setPosition(115.0f, 300.0f);
-    m_btnResume.setSize(220.0f, 50.0f);
+    m_btnResume.setPosition(85.0f, 240.0f);
+    m_btnResume.setSize(280.0f, 48.0f);
+    m_btnResume.setLabel("RESUME");
     m_btnResume.render(renderer, { 72, 187, 120, 255 });
 
-    m_btnMenu.setPosition(115.0f, 370.0f);
-    m_btnMenu.setSize(220.0f, 50.0f);
+    m_btnGiveUp.setPosition(85.0f, 300.0f);
+    m_btnGiveUp.setSize(280.0f, 48.0f);
+    m_btnGiveUp.setLabel("GIVE UP LEVEL");
+    m_btnGiveUp.render(renderer, { 180, 50, 50, 255 });
+
+    m_btnRestartRun.setPosition(85.0f, 360.0f);
+    m_btnRestartRun.setSize(280.0f, 48.0f);
+    m_btnRestartRun.setLabel("RESTART FROM LEVEL 1");
+    m_btnRestartRun.render(renderer, { 180, 100, 30, 255 });
+
+    m_btnMenu.setPosition(85.0f, 420.0f);
+    m_btnMenu.setSize(280.0f, 48.0f);
+    m_btnMenu.setLabel("MAIN MENU");
     m_btnMenu.render(renderer, { 45, 55, 72, 255 });
 
-    m_btnExit.setPosition(115.0f, 440.0f);
-    m_btnExit.setSize(220.0f, 50.0f);
-    m_btnExit.render(renderer, { 150, 45, 45, 255 }); // Dark Red Exit
+    m_btnExit.setPosition(85.0f, 480.0f);
+    m_btnExit.setSize(280.0f, 48.0f);
+    m_btnExit.setLabel("EXIT GAME");
+    m_btnExit.render(renderer, { 120, 35, 35, 255 }); // Dark Red Exit
 }
 
 void HUD::renderGameOver(SDL_Renderer* renderer, int level, int score, int highScore, bool timedOut)
@@ -340,4 +382,169 @@ void HUD::renderLevelComplete(SDL_Renderer* renderer, int level, int score, int 
     m_btnRestart.render(renderer, { 45, 55, 72, 255 }); // Grey-blue
     m_btnMenu.setPosition(125.0f, 580.0f);
     m_btnMenu.render(renderer, { 110, 45, 45, 255 }); // Red
+}
+
+void HUD::renderInfo(SDL_Renderer* renderer, int currentTab)
+{
+    // Full screen background
+    SDL_FRect bg = { 0.0f, 0.0f, static_cast<float>(Constants::SCREEN_WIDTH), static_cast<float>(Constants::SCREEN_HEIGHT) };
+    SDL_SetRenderDrawColor(renderer, 0x11, 0x14, 0x1d, 0xff);
+    SDL_RenderFillRect(renderer, &bg);
+
+    // Header Title
+    std::string title = "GAME GUIDE & INFO";
+    float tw = title.length() * 8.0f * 2.2f;
+    BitmapFont::drawText(renderer, title, (Constants::SCREEN_WIDTH - tw) / 2.0f, 20.0f, 2.2f, { 246, 224, 94, 255 });
+
+    // Tab Buttons at y = 58
+    m_btnTabPlay.setPosition(15.0f, 58.0f);
+    m_btnTabPlay.setSize(135.0f, 36.0f);
+    m_btnTabPlay.render(renderer, (currentTab == 0) ? SDL_Color{ 56, 178, 172, 255 } : SDL_Color{ 35, 42, 58, 255 },
+                                  (currentTab == 0) ? SDL_Color{ 255, 255, 255, 255 } : SDL_Color{ 160, 174, 192, 255 });
+
+    m_btnTabTiles.setPosition(157.0f, 58.0f);
+    m_btnTabTiles.setSize(135.0f, 36.0f);
+    m_btnTabTiles.render(renderer, (currentTab == 1) ? SDL_Color{ 56, 178, 172, 255 } : SDL_Color{ 35, 42, 58, 255 },
+                                   (currentTab == 1) ? SDL_Color{ 255, 255, 255, 255 } : SDL_Color{ 160, 174, 192, 255 });
+
+    m_btnTabDev.setPosition(299.0f, 58.0f);
+    m_btnTabDev.setSize(135.0f, 36.0f);
+    m_btnTabDev.render(renderer, (currentTab == 2) ? SDL_Color{ 56, 178, 172, 255 } : SDL_Color{ 35, 42, 58, 255 },
+                                 (currentTab == 2) ? SDL_Color{ 255, 255, 255, 255 } : SDL_Color{ 160, 174, 192, 255 });
+
+    // Content Card Panel
+    SDL_FRect card = { 15.0f, 104.0f, static_cast<float>(Constants::SCREEN_WIDTH - 30), 618.0f };
+    SDL_SetRenderDrawColor(renderer, 0x18, 0x1d, 0x2b, 0xff);
+    SDL_RenderFillRect(renderer, &card);
+    SDL_SetRenderDrawColor(renderer, 0x2d, 0x35, 0x48, 0xff);
+    SDL_RenderRect(renderer, &card);
+
+    if (currentTab == 0) // HOW TO PLAY
+    {
+        float cy = 120.0f;
+        BitmapFont::drawText(renderer, "MISSION OBJECTIVE", 30.0f, cy, 1.7f, { 72, 187, 120, 255 });
+        cy += 26.0f;
+        BitmapFont::drawText(renderer, "Navigate the golden hero to the green", 30.0f, cy, 1.25f, { 220, 230, 242, 255 });
+        cy += 18.0f;
+        BitmapFont::drawText(renderer, "EXIT tile before the timer runs out!", 30.0f, cy, 1.25f, { 220, 230, 242, 255 });
+
+        cy += 30.0f;
+        BitmapFont::drawText(renderer, "CONTROLS & MOVEMENT", 30.0f, cy, 1.7f, { 246, 224, 94, 255 });
+        cy += 26.0f;
+        BitmapFont::drawText(renderer, "- SWIPE in 4 directions anywhere on screen.", 30.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        cy += 18.0f;
+        BitmapFont::drawText(renderer, "- OR TAP the on-screen directional D-Pad.", 30.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        cy += 18.0f;
+        BitmapFont::drawText(renderer, "- Toggle SWIPE, DPAD, or BOTH anytime.", 30.0f, cy, 1.2f, { 200, 210, 225, 255 });
+
+        cy += 30.0f;
+        BitmapFont::drawText(renderer, "TIMER & SUDDEN DEATH", 30.0f, cy, 1.7f, { 245, 101, 101, 255 });
+        cy += 26.0f;
+        BitmapFont::drawText(renderer, "- Each level features a strict countdown.", 30.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        cy += 18.0f;
+        BitmapFont::drawText(renderer, "- Under 5s: 8-bit BGM accelerates urgently!", 30.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        cy += 18.0f;
+        BitmapFont::drawText(renderer, "- Time out = INSTANT GAME OVER!", 30.0f, cy, 1.2f, { 245, 101, 101, 255 });
+
+        cy += 30.0f;
+        BitmapFont::drawText(renderer, "TACTICAL IN-GAME BUTTONS", 30.0f, cy, 1.7f, { 99, 179, 237, 255 });
+        cy += 26.0f;
+        BitmapFont::drawText(renderer, "- [GIVE]: Concede and retry current level.", 30.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        cy += 18.0f;
+        BitmapFont::drawText(renderer, "- [LVL 1]: Restart entire run from Level 1.", 30.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        cy += 18.0f;
+        BitmapFont::drawText(renderer, "- [II]: Pause game and access full menu.", 30.0f, cy, 1.2f, { 200, 210, 225, 255 });
+
+        cy += 30.0f;
+        BitmapFont::drawText(renderer, "SCORING & 3-STAR RATINGS", 30.0f, cy, 1.7f, { 246, 224, 94, 255 });
+        cy += 26.0f;
+        BitmapFont::drawText(renderer, "- Complete levels in fewer moves and faster", 30.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        cy += 18.0f;
+        BitmapFont::drawText(renderer, "  times to unlock 3 STARS and high scores!", 30.0f, cy, 1.2f, { 200, 210, 225, 255 });
+    }
+    else if (currentTab == 1) // ALL TILES & ITEMS
+    {
+        struct TileInfo {
+            std::string name;
+            std::string desc;
+            SDL_Color col;
+        };
+
+        TileInfo items[] = {
+            { "EXIT", "Goal tile! Step here to finish level", { 72, 187, 120, 255 } },
+            { "DANGER", "Red spikes/traps. Fatal on contact!", { 245, 101, 101, 255 } },
+            { "ICE", "Slick floor. Slides player until obstacle", { 118, 228, 247, 255 } },
+            { "CRUMB", "Single-use stone. Collapses into Pit!", { 214, 158, 46, 255 } },
+            { "PIT", "Bottomless black void. Fatal fall!", { 40, 40, 50, 255 } },
+            { "PORTAL", "Cosmic wormholes linking two points", { 183, 148, 244, 255 } },
+            { "KEY/GATE", "Golden key unlatches locked gate", { 250, 204, 21, 255 } },
+            { "BOMB", "Detonates 3x3 blast clearing walls", { 74, 85, 104, 255 } },
+            { "SHIELD", "Blue crest absorbs 1 death or curse", { 49, 130, 206, 255 } },
+            { "FREEZE", "Hourglass pauses countdown for 8.0s", { 0, 181, 216, 255 } },
+            { "COIN", "Shiny collectible grants +500 PTS", { 250, 204, 21, 255 } },
+            { "CURSE", "Purple debuff reverses moves/warps", { 213, 63, 140, 255 } },
+            { "DEFUSE", "Teal cross cures curse & disarms traps", { 56, 178, 172, 255 } }
+        };
+
+        float startY = 114.0f;
+        float rowH = 46.0f;
+
+        for (int i = 0; i < 13; ++i)
+        {
+            float ry = startY + i * rowH;
+
+            // Mini visual icon
+            SDL_FRect iconRect = { 26.0f, ry + 2.0f, 22.0f, 22.0f };
+            SDL_SetRenderDrawColor(renderer, items[i].col.r, items[i].col.g, items[i].col.b, 255);
+            SDL_RenderFillRect(renderer, &iconRect);
+
+            // Name
+            BitmapFont::drawText(renderer, items[i].name, 56.0f, ry + 3.0f, 1.4f, items[i].col);
+
+            // Desc
+            BitmapFont::drawText(renderer, items[i].desc, 56.0f, ry + 22.0f, 1.15f, { 180, 195, 215, 255 });
+        }
+    }
+    else if (currentTab == 2) // DEVELOPER INFO
+    {
+        float cy = 125.0f;
+        BitmapFont::drawText(renderer, "ONE MORE MOVE", 30.0f, cy, 2.4f, { 246, 224, 94, 255 });
+        cy += 30.0f;
+        BitmapFont::drawText(renderer, "TACTICAL ESCAPE - ENHANCED EDITION", 30.0f, cy, 1.3f, { 160, 174, 192, 255 });
+
+        cy += 32.0f;
+        BitmapFont::drawText(renderer, "DEVELOPER & CREATOR", 30.0f, cy, 1.8f, { 72, 187, 120, 255 });
+        cy += 26.0f;
+        BitmapFont::drawText(renderer, "Prasad Kankhar", 30.0f, cy, 1.6f, { 255, 255, 255, 255 });
+        cy += 20.0f;
+        BitmapFont::drawText(renderer, "Lead Game Designer & Programmer", 30.0f, cy, 1.25f, { 180, 195, 215, 255 });
+
+        cy += 32.0f;
+        BitmapFont::drawText(renderer, "ENGINE & TECH SPECS", 30.0f, cy, 1.8f, { 99, 179, 237, 255 });
+        cy += 24.0f;
+        BitmapFont::drawText(renderer, "- Language: Modern C++", 30.0f, cy, 1.25f, { 200, 210, 225, 255 });
+        cy += 18.0f;
+        BitmapFont::drawText(renderer, "- Graphics: SDL3 Native Vector System", 30.0f, cy, 1.25f, { 200, 210, 225, 255 });
+        cy += 18.0f;
+        BitmapFont::drawText(renderer, "- Audio: 100% Procedural 8-Bit Chiptune", 30.0f, cy, 1.25f, { 200, 210, 225, 255 });
+        cy += 18.0f;
+        BitmapFont::drawText(renderer, "- Zero bloated external assets (<5MB APK)", 30.0f, cy, 1.25f, { 200, 210, 225, 255 });
+        cy += 18.0f;
+        BitmapFont::drawText(renderer, "- Cross-Platform: Android & Desktop", 30.0f, cy, 1.25f, { 200, 210, 225, 255 });
+
+        cy += 32.0f;
+        BitmapFont::drawText(renderer, "DESIGN PHILOSOPHY", 30.0f, cy, 1.8f, { 246, 224, 94, 255 });
+        cy += 24.0f;
+        BitmapFont::drawText(renderer, "Built to deliver the pure, intense thrill", 30.0f, cy, 1.25f, { 220, 230, 245, 255 });
+        cy += 18.0f;
+        BitmapFont::drawText(renderer, "of retro tactical gaming where every single", 30.0f, cy, 1.25f, { 220, 230, 245, 255 });
+        cy += 18.0f;
+        BitmapFont::drawText(renderer, "move counts. Think fast, plan, and escape!", 30.0f, cy, 1.25f, { 220, 230, 245, 255 });
+    }
+
+    // Back to Menu Button
+    m_btnBack.setPosition(85.0f, 735.0f);
+    m_btnBack.setSize(280.0f, 48.0f);
+    m_btnBack.setLabel("BACK TO MENU");
+    m_btnBack.render(renderer, { 72, 187, 120, 255 });
 }

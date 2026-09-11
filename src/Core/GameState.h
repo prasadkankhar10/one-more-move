@@ -6,5 +6,6 @@ enum class GameState
     Playing,
     Paused,
     LevelComplete,
-    GameOver
+    GameOver,
+    Info
 };

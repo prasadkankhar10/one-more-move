@@ -102,12 +102,19 @@ void Game::run()
     }
 }
 
-void Game::startNewGame()
+void Game::startNewGame(bool fromLevelOne)
 {
-    m_currentLevel = m_saveData.highestLevel;
-    if (m_currentLevel < 1)
+    if (fromLevelOne)
     {
         m_currentLevel = 1;
+    }
+    else
+    {
+        m_currentLevel = m_saveData.highestLevel;
+        if (m_currentLevel < 1)
+        {
+            m_currentLevel = 1;
+        }
     }
     m_accumulatedScore = 0;
     m_particles.clear();
@@ -685,7 +692,13 @@ void Game::handleMouseClick(float mx, float my)
             if (m_hud.m_btnPlay.checkClick(mx, my))
             {
                 m_audio.playMoveSound();
-                startNewGame();
+                startNewGame(false);
+            }
+            else if (m_hud.m_btnInfo.checkClick(mx, my))
+            {
+                m_audio.playMoveSound();
+                m_infoTab = 0;
+                m_state = GameState::Info;
             }
             else if (m_hud.getBtnControls().checkClick(mx, my))
             {
@@ -700,7 +713,18 @@ void Game::handleMouseClick(float mx, float my)
             break;
 
         case GameState::Playing:
-            if (m_hud.getBtnControls().checkClick(mx, my))
+            if (m_hud.m_btnGiveUp.checkClick(mx, my))
+            {
+                m_audio.playDeathSound();
+                m_timedOut = false;
+                triggerGameOver();
+            }
+            else if (m_hud.m_btnRestartRun.checkClick(mx, my))
+            {
+                m_audio.playMoveSound();
+                startNewGame(true);
+            }
+            else if (m_hud.getBtnControls().checkClick(mx, my))
             {
                 m_saveData.controlMode = (m_saveData.controlMode + 1) % 3;
                 SaveSystem::save(m_saveData, m_saveFilePath);
@@ -745,6 +769,17 @@ void Game::handleMouseClick(float mx, float my)
                 m_audio.playMoveSound();
                 m_state = GameState::Playing;
             }
+            else if (m_hud.m_btnGiveUp.checkClick(mx, my))
+            {
+                m_audio.playDeathSound();
+                m_timedOut = false;
+                triggerGameOver();
+            }
+            else if (m_hud.m_btnRestartRun.checkClick(mx, my))
+            {
+                m_audio.playMoveSound();
+                startNewGame(true);
+            }
             else if (m_hud.m_btnMenu.checkClick(mx, my))
             {
                 m_audio.playMoveSound();
@@ -753,6 +788,29 @@ void Game::handleMouseClick(float mx, float my)
             else if (m_hud.getBtnExit().checkClick(mx, my))
             {
                 m_running = false;
+            }
+            break;
+
+        case GameState::Info:
+            if (m_hud.m_btnTabPlay.checkClick(mx, my))
+            {
+                m_audio.playMoveSound();
+                m_infoTab = 0;
+            }
+            else if (m_hud.m_btnTabTiles.checkClick(mx, my))
+            {
+                m_audio.playMoveSound();
+                m_infoTab = 1;
+            }
+            else if (m_hud.m_btnTabDev.checkClick(mx, my))
+            {
+                m_audio.playMoveSound();
+                m_infoTab = 2;
+            }
+            else if (m_hud.m_btnBack.checkClick(mx, my))
+            {
+                m_audio.playMoveSound();
+                m_state = GameState::MainMenu;
             }
             break;
 
@@ -1067,6 +1125,9 @@ void Game::render()
                 int stars = m_scoreSystem.calculateStars(m_currentLevel);
                 m_hud.renderLevelComplete(m_renderer, m_currentLevel, score, m_scoreSystem.getMoves(), m_scoreSystem.getTime(), stars, m_saveData.highScore);
             }
+            break;
+        case GameState::Info:
+            m_hud.renderInfo(m_renderer, m_infoTab);
             break;
     }
 

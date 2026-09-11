@@ -39,7 +39,7 @@ private:
     void render();
 
     // Gameplay commands
-    void startNewGame();
+    void startNewGame(bool fromLevelOne = false);
     void loadNextLevel();
     void handleMovement(int dx, int dy);
     void handleMouseClick(float mx, float my);
@@ -81,6 +81,7 @@ private:
     float m_debuffMessageTimer = 0.0f;
     bool m_timedOut = false;
     float m_freezeTimer = 0.0f;
+    int m_infoTab = 0;
 
     // Touch & Swipe Controls
     float m_touchStartX = 0.0f;

@@ -97,10 +97,14 @@ SDL_FRect Board::getTileRect(int x, int y) const
 
 void Board::setBiome(int level)
 {
-    if (level <= 5) m_biome = 0;
-    else if (level <= 10) m_biome = 1;
-    else if (level <= 15) m_biome = 2;
-    else m_biome = 3;
+    if (level <= 3) m_biome = 0;
+    else if (level <= 6) m_biome = 1;
+    else if (level <= 9) m_biome = 2;
+    else if (level <= 12) m_biome = 3;
+    else if (level <= 15) m_biome = 4;
+    else if (level <= 18) m_biome = 5;
+    else if (level <= 21) m_biome = 6;
+    else m_biome = 7;
 }
 
 std::string Board::getBiomeName() const
@@ -108,9 +112,13 @@ std::string Board::getBiomeName() const
     switch (m_biome)
     {
         case 0: return "MIDNIGHT DUNGEON";
-        case 1: return "VOLCANIC FORGE";
-        case 2: return "NEON CYBER";
-        case 3: return "COSMIC VOID";
+        case 1: return "MOSSY RUINS";
+        case 2: return "OCEAN ABYSS";
+        case 3: return "VOLCANIC FORGE";
+        case 4: return "GLACIAL CAVERN";
+        case 5: return "NEON CYBERPUNK";
+        case 6: return "PHARAOH TOMB";
+        case 7: return "COSMIC VOID";
         default: return "DUNGEON";
     }
 }
@@ -120,28 +128,52 @@ void Board::render(SDL_Renderer* renderer, float offsetX, float offsetY)
     Uint32 ticks = SDL_GetTicks();
     float pulse = 0.5f + 0.5f * std::sin(ticks / 180.0f);
 
-    // Biome base colors
+    // Biome base colors (Default 0: Midnight Dungeon)
     Uint8 emptyR = 0x2d, emptyG = 0x35, emptyB = 0x48;
     Uint8 wallR = 0x4a, wallG = 0x55, wallB = 0x68;
     Uint8 outlineR = 0x3a, outlineG = 0x45, outlineB = 0x5c;
 
-    if (m_biome == 1) // Volcanic Forge
+    if (m_biome == 1) // Mossy Ruins
+    {
+        emptyR = 0x1e; emptyG = 0x33; emptyB = 0x24;
+        wallR = 0x2d; wallG = 0x5a; wallB = 0x36;
+        outlineR = 0x38; outlineG = 0x73; outlineB = 0x45;
+    }
+    else if (m_biome == 2) // Ocean Abyss
+    {
+        emptyR = 0x11; emptyG = 0x2b; emptyB = 0x38;
+        wallR = 0x1b; wallG = 0x4f; wallB = 0x63;
+        outlineR = 0x26; outlineG = 0x72; outlineB = 0x8a;
+    }
+    else if (m_biome == 3) // Volcanic Forge
     {
         emptyR = 0x38; emptyG = 0x1a; emptyB = 0x1a;
         wallR = 0x6b; wallG = 0x2d; wallB = 0x2d;
-        outlineR = 0x52; outlineG = 0x22; outlineB = 0x22;
+        outlineR = 0x8a; outlineG = 0x34; outlineB = 0x34;
     }
-    else if (m_biome == 2) // Neon Cyber
+    else if (m_biome == 4) // Glacial Cavern
     {
-        emptyR = 0x15; emptyG = 0x1d; emptyB = 0x3b;
-        wallR = 0x2d; wallG = 0x37; wallB = 0x6b;
-        outlineR = 0x32; outlineG = 0x4a; outlineB = 0x85;
+        emptyR = 0x1e; emptyG = 0x33; emptyB = 0x4d;
+        wallR = 0x32; wallG = 0x55; wallB = 0x7e;
+        outlineR = 0x4a; outlineG = 0x7c; outlineB = 0xb5;
     }
-    else if (m_biome == 3) // Cosmic Void
+    else if (m_biome == 5) // Neon Cyberpunk
+    {
+        emptyR = 0x1c; emptyG = 0x14; emptyB = 0x38;
+        wallR = 0x3b; wallG = 0x1d; wallB = 0x6b;
+        outlineR = 0x63; outlineG = 0x29; outlineB = 0xb0;
+    }
+    else if (m_biome == 6) // Pharaoh Tomb
+    {
+        emptyR = 0x38; emptyG = 0x2b; emptyB = 0x16;
+        wallR = 0x63; wallG = 0x4d; wallB = 0x24;
+        outlineR = 0x8c; outlineG = 0x6e; outlineB = 0x35;
+    }
+    else if (m_biome == 7) // Cosmic Void
     {
         emptyR = 0x12; emptyG = 0x0e; emptyB = 0x24;
         wallR = 0x36; wallG = 0x1d; wallB = 0x52;
-        outlineR = 0x40; outlineG = 0x2b; outlineB = 0x60;
+        outlineR = 0x54; outlineG = 0x2b; outlineB = 0x78;
     }
 
     for (int y = 0; y < m_height; ++y)
