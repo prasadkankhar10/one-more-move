@@ -40,6 +40,7 @@ private:
 
     // Gameplay commands
     void startNewGame(bool fromLevelOne = false);
+    void startSpecificLevel(int level);
     void restartCurrentLevel();
     void loadNextLevel();
     void handleMovement(int dx, int dy);
@@ -75,14 +76,19 @@ private:
     int m_levelBaseScore = 0;
     int m_spawnX = 1;
     int m_spawnY = 1;
+    bool m_isEndless = false;
 
-    // Debuff State
+    // Debuff & Tutorial State
     int m_reversedTurns = 0;
     std::string m_debuffMessage = "";
     float m_debuffMessageTimer = 0.0f;
     bool m_timedOut = false;
     float m_freezeTimer = 0.0f;
     int m_infoTab = 0;
+    bool m_confirmReset = false;
+    std::string m_tutorialHint = "";
+    float m_tutorialAlpha = 0.0f;
+
 
     // Touch & Swipe Controls
     float m_touchStartX = 0.0f;

@@ -21,6 +21,7 @@ public:
     float getY() const { return m_rect.y; }
     float getW() const { return m_rect.w; }
     float getH() const { return m_rect.h; }
+    const SDL_FRect& getRect() const { return m_rect; }
 
 private:
     SDL_FRect m_rect = { 0.0f, 0.0f, 0.0f, 0.0f };

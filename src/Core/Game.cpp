@@ -107,6 +107,7 @@ void Game::startNewGame(bool fromLevelOne)
     if (fromLevelOne)
     {
         m_currentLevel = 1;
+        m_isEndless = false;
     }
     else
     {
@@ -115,7 +116,15 @@ void Game::startNewGame(bool fromLevelOne)
         {
             m_currentLevel = 1;
         }
+        m_isEndless = (m_currentLevel > 24);
     }
+    startSpecificLevel(m_currentLevel);
+}
+
+void Game::startSpecificLevel(int level)
+{
+    m_currentLevel = level;
+    m_isEndless = (level > 24);
     m_accumulatedScore = 0;
     m_particles.clear();
     m_worldSystem.reset();
@@ -127,8 +136,23 @@ void Game::startNewGame(bool fromLevelOne)
     m_freezeTimer = 0.0f;
     m_lastTime = SDL_GetTicks();
 
-    // Seed randomly
-    m_currentSeed = static_cast<int>(SDL_GetTicks());
+    if (!m_isEndless && m_currentLevel <= 24)
+    {
+        m_currentSeed = 1000 + m_currentLevel * 137;
+    }
+    else
+    {
+        m_currentSeed = static_cast<int>(SDL_GetTicks() + m_currentLevel);
+    }
+
+    if (m_currentLevel == 1) m_tutorialHint = "SWIPE OR USE D-PAD TO ESCAPE TO EXIT";
+    else if (m_currentLevel == 3) m_tutorialHint = "WATCH OUT! AVOID RED SPIKES & VOID PITS";
+    else if (m_currentLevel == 4) m_tutorialHint = "LOCKED GATE! COLLECT GOLD KEY FIRST";
+    else if (m_currentLevel == 5) m_tutorialHint = "ICE FLOOR! YOU WILL SLIDE FORWARD";
+    else if (m_currentLevel == 7) m_tutorialHint = "BOMBS BLAST 3x3 AREA AROUND YOU";
+    else m_tutorialHint = "";
+    m_tutorialAlpha = (m_tutorialHint.empty() ? 0.0f : 1.0f);
+
     int px, py, ex, ey;
     m_board = m_generator.generate(m_currentLevel, m_currentSeed, px, py, ex, ey);
     m_player.reset(px, py);
@@ -150,6 +174,14 @@ void Game::restartCurrentLevel()
     m_freezeTimer = 0.0f;
     m_lastTime = SDL_GetTicks();
 
+    if (m_currentLevel == 1) m_tutorialHint = "SWIPE OR USE D-PAD TO ESCAPE TO EXIT";
+    else if (m_currentLevel == 3) m_tutorialHint = "WATCH OUT! AVOID RED SPIKES & VOID PITS";
+    else if (m_currentLevel == 4) m_tutorialHint = "LOCKED GATE! COLLECT GOLD KEY FIRST";
+    else if (m_currentLevel == 5) m_tutorialHint = "ICE FLOOR! YOU WILL SLIDE FORWARD";
+    else if (m_currentLevel == 7) m_tutorialHint = "BOMBS BLAST 3x3 AREA AROUND YOU";
+    else m_tutorialHint = "";
+    m_tutorialAlpha = (m_tutorialHint.empty() ? 0.0f : 1.0f);
+
     // Regenerate the exact same level layout using the stored seed
     int px, py, ex, ey;
     m_board = m_generator.generate(m_currentLevel, m_currentSeed, px, py, ex, ey);
@@ -161,9 +193,12 @@ void Game::restartCurrentLevel()
 }
 
 void Game::loadNextLevel()
-
 {
     m_currentLevel++;
+    if (m_currentLevel > 24)
+    {
+        m_isEndless = true;
+    }
     m_particles.clear();
     m_worldSystem.reset();
     m_scoreSystem.resetLevel();
@@ -174,7 +209,23 @@ void Game::loadNextLevel()
     m_freezeTimer = 0.0f;
     m_lastTime = SDL_GetTicks();
 
-    m_currentSeed = static_cast<int>(SDL_GetTicks() + m_currentLevel);
+    if (!m_isEndless && m_currentLevel <= 24)
+    {
+        m_currentSeed = 1000 + m_currentLevel * 137;
+    }
+    else
+    {
+        m_currentSeed = static_cast<int>(SDL_GetTicks() + m_currentLevel);
+    }
+
+    if (m_currentLevel == 1) m_tutorialHint = "SWIPE OR USE D-PAD TO ESCAPE TO EXIT";
+    else if (m_currentLevel == 3) m_tutorialHint = "WATCH OUT! AVOID RED SPIKES & VOID PITS";
+    else if (m_currentLevel == 4) m_tutorialHint = "LOCKED GATE! COLLECT GOLD KEY FIRST";
+    else if (m_currentLevel == 5) m_tutorialHint = "ICE FLOOR! YOU WILL SLIDE FORWARD";
+    else if (m_currentLevel == 7) m_tutorialHint = "BOMBS BLAST 3x3 AREA AROUND YOU";
+    else m_tutorialHint = "";
+    m_tutorialAlpha = (m_tutorialHint.empty() ? 0.0f : 1.0f);
+
     int px, py, ex, ey;
     m_board = m_generator.generate(m_currentLevel, m_currentSeed, px, py, ex, ey);
     m_player.reset(px, py);
@@ -187,6 +238,11 @@ void Game::loadNextLevel()
 void Game::handleMovement(int dx, int dy)
 {
     if (m_state != GameState::Playing || !m_player.isAlive()) return;
+
+    if (m_tutorialAlpha > 0.0f)
+    {
+        m_tutorialAlpha = 0.0f;
+    }
 
     // Apply Reversed Controls Debuff
     if (m_reversedTurns > 0)
@@ -675,6 +731,16 @@ void Game::triggerLevelComplete()
     int levelScore = m_scoreSystem.calculateScore(m_currentLevel, density);
     m_accumulatedScore += levelScore;
 
+    // Save star rating
+    int stars = m_scoreSystem.calculateStars(m_currentLevel);
+    if (m_currentLevel >= 1 && m_currentLevel <= 24)
+    {
+        if (stars > m_saveData.levelStars[m_currentLevel])
+        {
+            m_saveData.levelStars[m_currentLevel] = stars;
+        }
+    }
+
     // Save progress
     if (m_accumulatedScore > m_saveData.highScore)
     {
@@ -684,6 +750,15 @@ void Game::triggerLevelComplete()
     {
         m_saveData.highestLevel = m_currentLevel + 1;
     }
+
+    if (m_currentLevel == 24 && !m_isEndless)
+    {
+        m_saveData.campaignCompleted = true;
+        SaveSystem::save(m_saveData, m_saveFilePath);
+        m_state = GameState::GameWon;
+        return;
+    }
+
     SaveSystem::save(m_saveData, m_saveFilePath);
 
     m_state = GameState::LevelComplete;
@@ -722,21 +797,109 @@ void Game::handleMouseClick(float mx, float my)
                 m_audio.playMoveSound();
                 startNewGame(false);
             }
+            else if (m_hud.m_btnLevelSelect.checkClick(mx, my))
+            {
+                m_audio.playMoveSound();
+                m_state = GameState::LevelSelect;
+            }
+            else if (m_hud.m_btnSettings.checkClick(mx, my))
+            {
+                m_audio.playMoveSound();
+                m_confirmReset = false;
+                m_state = GameState::Settings;
+            }
             else if (m_hud.m_btnInfo.checkClick(mx, my))
             {
                 m_audio.playMoveSound();
                 m_infoTab = 0;
                 m_state = GameState::Info;
             }
-            else if (m_hud.getBtnControls().checkClick(mx, my))
+            else if (m_hud.getBtnExit().checkClick(mx, my))
+            {
+                m_running = false;
+            }
+            break;
+
+        case GameState::LevelSelect:
+            for (int i = 0; i < 24; ++i)
+            {
+                if (m_hud.m_btnLevels[i].checkClick(mx, my))
+                {
+                    int lvl = i + 1;
+                    if (lvl <= m_saveData.highestLevel)
+                    {
+                        m_audio.playMoveSound();
+                        startSpecificLevel(lvl);
+                    }
+                    else
+                    {
+                        m_audio.playInvalidMoveSound();
+                    }
+                    return;
+                }
+            }
+            if (m_hud.m_btnBack.checkClick(mx, my))
+            {
+                m_audio.playMoveSound();
+                m_state = GameState::MainMenu;
+            }
+            break;
+
+        case GameState::Settings:
+            if (m_hud.getBtnControls().checkClick(mx, my))
             {
                 m_saveData.controlMode = (m_saveData.controlMode + 1) % 3;
                 SaveSystem::save(m_saveData, m_saveFilePath);
                 m_audio.playMoveSound();
             }
-            else if (m_hud.getBtnExit().checkClick(mx, my))
+            else if (m_hud.getBtnSound().checkClick(mx, my))
             {
-                m_running = false;
+                m_audio.toggleSound();
+                m_saveData.soundOn = m_audio.isSoundOn();
+                SaveSystem::save(m_saveData, m_saveFilePath);
+            }
+            else if (m_hud.m_btnHaptics.checkClick(mx, my))
+            {
+                m_saveData.hapticsOn = !m_saveData.hapticsOn;
+                SaveSystem::save(m_saveData, m_saveFilePath);
+                m_audio.playMoveSound();
+            }
+            else if (m_hud.m_btnResetData.checkClick(mx, my))
+            {
+                if (!m_confirmReset)
+                {
+                    m_confirmReset = true;
+                    m_audio.playWarningSound();
+                }
+                else
+                {
+                    m_saveData.highScore = 0;
+                    m_saveData.highestLevel = 1;
+                    m_saveData.campaignCompleted = false;
+                    for (int s = 0; s <= 24; ++s) m_saveData.levelStars[s] = 0;
+                    SaveSystem::save(m_saveData, m_saveFilePath);
+                    m_confirmReset = false;
+                    m_audio.playDeathSound();
+                }
+            }
+            else if (m_hud.m_btnBack.checkClick(mx, my))
+            {
+                m_audio.playMoveSound();
+                m_confirmReset = false;
+                m_state = GameState::MainMenu;
+            }
+            break;
+
+        case GameState::GameWon:
+            if (m_hud.m_btnEndless.checkClick(mx, my))
+            {
+                m_audio.playWinSound();
+                startSpecificLevel(25);
+            }
+            else if (m_hud.m_btnMenu.checkClick(mx, my))
+            {
+                m_audio.playMoveSound();
+                m_state = GameState::MainMenu;
             }
             break;
 
@@ -962,11 +1125,34 @@ void Game::processInput()
         }
         else if (event.type == SDL_EVENT_KEY_DOWN)
         {
-            if (event.key.key == SDLK_ESCAPE)
+            if (event.key.key == SDLK_ESCAPE || event.key.key == SDLK_AC_BACK)
             {
-                if (m_state == GameState::Playing) m_state = GameState::Paused;
-                else if (m_state == GameState::Paused) m_state = GameState::Playing;
-                else if (m_state == GameState::MainMenu) m_running = false;
+                switch (m_state)
+                {
+                    case GameState::Playing:
+                        m_state = GameState::Paused;
+                        break;
+                    case GameState::Paused:
+                        m_state = GameState::Playing;
+                        break;
+                    case GameState::LevelSelect:
+                    case GameState::Settings:
+                    case GameState::Info:
+                    case GameState::GameWon:
+                        m_confirmReset = false;
+                        m_state = GameState::MainMenu;
+                        break;
+                    case GameState::PathPreview:
+                        m_state = GameState::GameOver;
+                        break;
+                    case GameState::GameOver:
+                    case GameState::LevelComplete:
+                        m_state = GameState::MainMenu;
+                        break;
+                    case GameState::MainMenu:
+                        m_running = false;
+                        break;
+                }
             }
 
             // Keyboard movements: block repeating inputs to prevent sliding
@@ -1075,6 +1261,16 @@ void Game::update(float deltaTime)
         // Procedural 8-bit dynamic chiptune background music
         bool isUrgent = (getLevelTimeLimit() - m_scoreSystem.getTime() < 5.0f && m_freezeTimer <= 0.0f);
         m_audio.updateBGM(isUrgent, m_state == GameState::Playing);
+
+        // Fade tutorial hint after 6 seconds in level
+        if (m_tutorialAlpha > 0.0f)
+        {
+            if (m_scoreSystem.getTime() > 6.0f)
+            {
+                m_tutorialAlpha -= deltaTime * 1.5f;
+                if (m_tutorialAlpha < 0.0f) m_tutorialAlpha = 0.0f;
+            }
+        }
     }
     else
     {
@@ -1108,8 +1304,8 @@ void Game::render()
     float renderOriginX = originX + shakeX;
     float renderOriginY = originY + shakeY;
 
-    // Render Grid & Entities (Only when Playing, Paused, LevelComplete, GameOver, or PathPreview)
-    if (m_state != GameState::MainMenu)
+    // Render Grid & Entities (Only when in active gameplay or in-game overlays)
+    if (m_state != GameState::MainMenu && m_state != GameState::LevelSelect && m_state != GameState::Settings && m_state != GameState::Info && m_state != GameState::GameWon)
     {
         // Render Board with shake offsets
         m_board.render(m_renderer, shakeX, shakeY);
@@ -1142,6 +1338,15 @@ void Game::render()
         case GameState::MainMenu:
             m_hud.renderMainMenu(m_renderer, m_saveData.highScore, m_saveData.highestLevel, m_saveData.controlMode);
             break;
+        case GameState::LevelSelect:
+            m_hud.renderLevelSelect(m_renderer, m_saveData.highestLevel, m_saveData.levelStars);
+            break;
+        case GameState::Settings:
+            m_hud.renderSettings(m_renderer, m_saveData.controlMode, m_audio.isSoundOn(), m_saveData.hapticsOn, m_confirmReset);
+            break;
+        case GameState::GameWon:
+            m_hud.renderGameWon(m_renderer, m_saveData.getTotalStars(), m_saveData.highScore);
+            break;
         case GameState::Playing:
             {
                 float limit = getLevelTimeLimit();
@@ -1153,6 +1358,11 @@ void Game::render()
                                     m_audio.isSoundOn(), timeLeft, limit, m_saveData.controlMode,
                                     m_reversedTurns, m_debuffMessage,
                                     m_player.hasShield(), m_player.hasKey(), m_freezeTimer, m_board.getBiomeName());
+
+                if (m_tutorialAlpha > 0.0f && !m_tutorialHint.empty())
+                {
+                    m_hud.renderTutorialHint(m_renderer, m_tutorialHint, m_tutorialAlpha);
+                }
             }
             break;
         case GameState::Paused:

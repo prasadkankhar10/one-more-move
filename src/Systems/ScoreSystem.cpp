@@ -1,6 +1,7 @@
 #include "ScoreSystem.h"
 #include <algorithm>
 
+
 ScoreSystem::ScoreSystem()
 {
 }

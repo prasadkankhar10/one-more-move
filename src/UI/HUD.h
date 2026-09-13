@@ -15,12 +15,16 @@ public:
     void renderPlaying(SDL_Renderer* renderer, int level, int moves, int score, bool soundOn, float timeLeft, float timeLimit, int controlMode, int reversedTurns, const std::string& debuffMsg, bool hasShield = false, bool hasKey = false, float freezeTime = 0.0f, const std::string& biomeName = "");
 
     // Overlay Screen Renderers
-    void renderMainMenu(SDL_Renderer* renderer, int highScore, int highestLevel, int controlMode);
+    void renderMainMenu(SDL_Renderer* renderer, int highScore, int highestLevel, int controlMode, int totalStars = 0, bool campaignCompleted = false);
     void renderPaused(SDL_Renderer* renderer);
     void renderGameOver(SDL_Renderer* renderer, int level, int score, int highScore, bool timedOut = false);
     void renderLevelComplete(SDL_Renderer* renderer, int level, int score, int moves, float time, int stars, int highScore);
     void renderInfo(SDL_Renderer* renderer, int currentTab);
     void renderPathPreview(SDL_Renderer* renderer, int pathMoves);
+    void renderLevelSelect(SDL_Renderer* renderer, int highestLevel, const int levelStars[25]);
+    void renderSettings(SDL_Renderer* renderer, bool soundOn, int controlMode, bool hapticsOn, bool confirmReset);
+    void renderGameWon(SDL_Renderer* renderer, int totalScore, int totalStars);
+    void renderTutorialHint(SDL_Renderer* renderer, const std::string& hintText, float alpha);
 
     // Getters for touch buttons (so Game class can check tap inputs)
     const Button& getBtnUp() const { return m_btnUp; }
@@ -46,11 +50,20 @@ public:
     Button m_btnInfo; // Open How To Play / Info
     Button m_btnBack; // Back button on info screen
 
+    Button m_btnLevelSelect; // Open level selection screen
+    Button m_btnSettings;    // Open settings screen
+    Button m_btnHaptics;     // Toggle haptic vibration
+    Button m_btnResetData;   // Reset progress in settings
+    Button m_btnEndless;     // Continue into Endless Mode after campaign
+
+    // Level select buttons (indices 1 to 24)
+    Button m_btnLevels[25];
 
     // Info tabs
     Button m_btnTabPlay;
     Button m_btnTabTiles;
     Button m_btnTabDev;
+
 
 private:
     // Directional pad buttons

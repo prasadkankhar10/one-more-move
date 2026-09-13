@@ -34,21 +34,50 @@ void HUD::init()
     m_btnRight = Button(dpadCenterX + (btnW / 2.0f) + gap, dpadCenterY - (btnH / 2.0f), btnW, btnH, "RIGHT");
 
     // Initialize overlay menu buttons
-    m_btnPlay = Button(85.0f, 365.0f, 280.0f, 50.0f, "PLAY GAME");
-    m_btnInfo = Button(85.0f, 425.0f, 280.0f, 45.0f, "HOW TO PLAY & INFO");
-    m_btnExit = Button(85.0f, 535.0f, 280.0f, 45.0f, "EXIT GAME");
+    m_btnPlay = Button(85.0f, 310.0f, 280.0f, 46.0f, "PLAY CAMPAIGN");
+    m_btnLevelSelect = Button(85.0f, 365.0f, 280.0f, 46.0f, "SELECT LEVEL");
+    m_btnInfo = Button(85.0f, 420.0f, 280.0f, 46.0f, "HOW TO PLAY & INFO");
+    m_btnSettings = Button(85.0f, 475.0f, 280.0f, 46.0f, "SETTINGS");
+    m_btnExit = Button(85.0f, 530.0f, 280.0f, 46.0f, "EXIT GAME");
+    m_btnEndless = Button(85.0f, 585.0f, 280.0f, 46.0f, "ENDLESS EXPEDITION");
+
     m_btnResume = Button(85.0f, 240.0f, 280.0f, 48.0f, "RESUME");
     m_btnNext = Button(115.0f, 440.0f, 220.0f, 55.0f, "NEXT LEVEL");
     m_btnRestart = Button(85.0f, 400.0f, 280.0f, 46.0f, "TRY AGAIN");
     m_btnShowPath = Button(85.0f, 455.0f, 280.0f, 46.0f, "SHOW WINNING PATH");
     m_btnMenu = Button(85.0f, 510.0f, 280.0f, 46.0f, "MAIN MENU");
 
+    // Settings screen buttons
+    m_btnControls = Button(65.0f, 180.0f, 320.0f, 48.0f, "CONTROLS: BOTH");
+    m_btnHaptics = Button(65.0f, 245.0f, 320.0f, 48.0f, "HAPTICS: ON");
+    m_btnResetData = Button(65.0f, 375.0f, 320.0f, 48.0f, "RESET ALL PROGRESS");
+
+    // Level Select buttons: 4 cols x 6 rows (levels 1 to 24)
+    float gridLeft = 25.0f;
+    float gridTop = 110.0f;
+    float lvlBtnW = 90.0f;
+    float lvlBtnH = 68.0f;
+    float gapX = 13.0f;
+    float gapY = 16.0f;
+
+    for (int r = 0; r < 6; ++r)
+    {
+        for (int c = 0; c < 4; ++c)
+        {
+            int lvl = r * 4 + c + 1;
+            float bx = gridLeft + c * (lvlBtnW + gapX);
+            float by = gridTop + r * (lvlBtnH + gapY);
+            m_btnLevels[lvl - 1] = Button(bx, by, lvlBtnW, lvlBtnH, std::to_string(lvl));
+        }
+    }
+
     // Info screen tab buttons
     m_btnTabPlay = Button(15.0f, 65.0f, 135.0f, 36.0f, "HOW TO PLAY");
     m_btnTabTiles = Button(157.0f, 65.0f, 135.0f, 36.0f, "ALL TILES");
     m_btnTabDev = Button(299.0f, 65.0f, 135.0f, 36.0f, "DEVELOPER");
-    m_btnBack = Button(115.0f, 735.0f, 220.0f, 45.0f, "BACK TO MENU");
+    m_btnBack = Button(85.0f, 735.0f, 280.0f, 48.0f, "BACK TO MENU");
 }
+
 
 void HUD::renderPlaying(SDL_Renderer* renderer, int level, int moves, int score, bool soundOn, float timeLeft, float timeLimit, int controlMode, int reversedTurns, const std::string& debuffMsg, bool hasShield, bool hasKey, float freezeTime, const std::string& biomeName)
 {
@@ -196,7 +225,7 @@ void HUD::renderPlaying(SDL_Renderer* renderer, int level, int moves, int score,
     }
 }
 
-void HUD::renderMainMenu(SDL_Renderer* renderer, int highScore, int highestLevel, int controlMode)
+void HUD::renderMainMenu(SDL_Renderer* renderer, int highScore, int highestLevel, int controlMode, int totalStars, bool campaignCompleted)
 {
     // Draw Title: ONE MORE MOVE with shadow
     std::string title = "ONE MORE MOVE";
@@ -205,55 +234,90 @@ void HUD::renderMainMenu(SDL_Renderer* renderer, int highScore, int highestLevel
     float titleX = (Constants::SCREEN_WIDTH - titleWidth) / 2.0f;
 
     // Drop shadow
-    BitmapFont::drawText(renderer, title, titleX + 3.0f, 133.0f, scale, { 0, 0, 0, 180 });
+    BitmapFont::drawText(renderer, title, titleX + 3.0f, 68.0f, scale, { 0, 0, 0, 180 });
     // Title Gold
-    BitmapFont::drawText(renderer, title, titleX, 130.0f, scale, { 246, 224, 94, 255 });
+    BitmapFont::drawText(renderer, title, titleX, 65.0f, scale, { 246, 224, 94, 255 });
 
     // Subtitle
     std::string sub = "TACTICAL ESCAPE";
     float subScale = 1.6f;
     float subWidth = BitmapFont::getTextWidth(sub, subScale);
     float subX = (Constants::SCREEN_WIDTH - subWidth) / 2.0f;
-    BitmapFont::drawText(renderer, sub, subX, 175.0f, subScale, { 160, 174, 192, 255 });
+    BitmapFont::drawText(renderer, sub, subX, 108.0f, subScale, { 160, 174, 192, 255 });
 
     // Stats Card
-    SDL_FRect statCard = { 45.0f, 215.0f, 360.0f, 115.0f };
+    SDL_FRect statCard = { 45.0f, 142.0f, 360.0f, 125.0f };
     SDL_SetRenderDrawColor(renderer, 0x16, 0x1a, 0x24, 0xff);
     SDL_RenderFillRect(renderer, &statCard);
     SDL_SetRenderDrawColor(renderer, 0x2d, 0x35, 0x48, 0xff);
     SDL_RenderRect(renderer, &statCard);
 
     std::stringstream ss;
-    ss << "UNLOCKED LEVEL: " << highestLevel;
-    float sw1 = BitmapFont::getTextWidth(ss.str(), 1.7f);
-    BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - sw1) / 2.0f, 240.0f, 1.7f, { 255, 255, 255, 255 });
+    if (campaignCompleted)
+    {
+        ss << "! CAMPAIGN CONQUERED !";
+        float sw1 = BitmapFont::getTextWidth(ss.str(), 1.6f);
+        BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - sw1) / 2.0f, 158.0f, 1.6f, { 72, 187, 120, 255 });
+    }
+    else
+    {
+        ss << "CAMPAIGN: " << std::min(highestLevel, 24) << " / 24 UNLOCKED";
+        float sw1 = BitmapFont::getTextWidth(ss.str(), 1.5f);
+        BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - sw1) / 2.0f, 158.0f, 1.5f, { 246, 224, 94, 255 });
+    }
+
+    ss.str("");
+    ss << "STARS COLLECTED: " << totalStars << " / 72";
+    float sw2 = BitmapFont::getTextWidth(ss.str(), 1.5f);
+    BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - sw2) / 2.0f, 192.0f, 1.5f, { 250, 204, 21, 255 });
 
     ss.str("");
     ss << "BEST SCORE: " << highScore;
-    float sw2 = BitmapFont::getTextWidth(ss.str(), 1.9f);
-    BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - sw2) / 2.0f, 280.0f, 1.9f, { 104, 219, 120, 255 });
+    float sw3 = BitmapFont::getTextWidth(ss.str(), 1.6f);
+    BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - sw3) / 2.0f, 226.0f, 1.6f, { 104, 219, 120, 255 });
 
     // Menu Buttons
-    m_btnPlay.setPosition(85.0f, 365.0f);
-    m_btnPlay.setSize(280.0f, 50.0f);
+    m_btnPlay.setPosition(85.0f, 288.0f);
+    m_btnPlay.setSize(280.0f, 48.0f);
+    m_btnPlay.setLabel(highestLevel > 1 ? "RESUME CAMPAIGN" : "PLAY CAMPAIGN");
     m_btnPlay.render(renderer, { 72, 187, 120, 255 }); // Bright Green button
 
-    m_btnInfo.setPosition(85.0f, 425.0f);
-    m_btnInfo.setSize(280.0f, 45.0f);
-    m_btnInfo.setLabel("HOW TO PLAY & INFO");
+    m_btnLevelSelect.setPosition(85.0f, 346.0f);
+    m_btnLevelSelect.setSize(280.0f, 46.0f);
+    m_btnLevelSelect.setLabel("SELECT MISSION (1-24)");
+    m_btnLevelSelect.render(renderer, { 56, 178, 172, 255 }); // Teal button
+
+    m_btnInfo.setPosition(85.0f, 402.0f);
+    m_btnInfo.setSize(280.0f, 46.0f);
+    m_btnInfo.setLabel("HOW TO PLAY & GUIDE");
     m_btnInfo.render(renderer, { 43, 108, 176, 255 }); // Blue info button
 
-    std::string ctrlText = (controlMode == 0) ? "CONTROLS: BOTH" : (controlMode == 1 ? "CONTROLS: SWIPE" : "CONTROLS: DPAD");
-    m_btnControls.setPosition(85.0f, 480.0f);
-    m_btnControls.setSize(280.0f, 45.0f);
-    m_btnControls.setLabel(ctrlText);
-    m_btnControls.render(renderer, { 45, 55, 72, 255 }, { 255, 255, 255, 255 });
+    m_btnSettings.setPosition(85.0f, 458.0f);
+    m_btnSettings.setSize(280.0f, 46.0f);
+    m_btnSettings.setLabel("SETTINGS & AUDIO");
+    m_btnSettings.render(renderer, { 45, 55, 72, 255 }); // Slate button
 
-    m_btnExit.setPosition(85.0f, 535.0f);
-    m_btnExit.setSize(280.0f, 45.0f);
-    m_btnExit.setLabel("EXIT GAME");
-    m_btnExit.render(renderer, { 150, 45, 45, 255 }, { 255, 255, 255, 255 }); // Crimson
+    if (campaignCompleted)
+    {
+        m_btnEndless.setPosition(85.0f, 514.0f);
+        m_btnEndless.setSize(280.0f, 46.0f);
+        m_btnEndless.setLabel("ENDLESS EXPEDITION");
+        m_btnEndless.render(renderer, { 180, 100, 30, 255 }, { 255, 230, 180, 255 }); // Gold Endless
+
+        m_btnExit.setPosition(85.0f, 570.0f);
+        m_btnExit.setSize(280.0f, 46.0f);
+        m_btnExit.setLabel("EXIT GAME");
+        m_btnExit.render(renderer, { 150, 45, 45, 255 }); // Crimson
+    }
+    else
+    {
+        m_btnExit.setPosition(85.0f, 514.0f);
+        m_btnExit.setSize(280.0f, 46.0f);
+        m_btnExit.setLabel("EXIT GAME");
+        m_btnExit.render(renderer, { 150, 45, 45, 255 }); // Crimson
+    }
 }
+
 
 void HUD::renderPaused(SDL_Renderer* renderer)
 {
@@ -602,4 +666,210 @@ void HUD::renderPathPreview(SDL_Renderer* renderer, int pathMoves)
     m_btnRestart.setLabel("RETRY CHALLENGE");
     m_btnRestart.render(renderer, { 72, 187, 120, 255 });
 }
+
+void HUD::renderLevelSelect(SDL_Renderer* renderer, int highestLevel, const int levelStars[25])
+{
+    // Full screen background
+    SDL_FRect bg = { 0.0f, 0.0f, static_cast<float>(Constants::SCREEN_WIDTH), static_cast<float>(Constants::SCREEN_HEIGHT) };
+    SDL_SetRenderDrawColor(renderer, 0x11, 0x14, 0x1d, 0xff);
+    SDL_RenderFillRect(renderer, &bg);
+
+    // Title
+    std::string title = "CAMPAIGN MISSIONS";
+    float tw = BitmapFont::getTextWidth(title, 2.3f);
+    BitmapFont::drawText(renderer, title, (Constants::SCREEN_WIDTH - tw) / 2.0f, 25.0f, 2.3f, { 246, 224, 94, 255 });
+
+    std::string sub = "CHOOSE A MISSION TO CONQUER (1-24)";
+    float subW = BitmapFont::getTextWidth(sub, 1.25f);
+    BitmapFont::drawText(renderer, sub, (Constants::SCREEN_WIDTH - subW) / 2.0f, 60.0f, 1.25f, { 160, 174, 192, 255 });
+
+    // 8 Biome color accents
+    SDL_Color biomeColors[8] = {
+        { 60, 70, 90, 255 },   // 1-3: Midnight Dungeon
+        { 38, 80, 48, 255 },   // 4-6: Mossy Ruins
+        { 25, 75, 100, 255 },  // 7-9: Ocean Abyss
+        { 130, 50, 25, 255 },  // 10-12: Volcanic Forge
+        { 45, 90, 120, 255 },  // 13-15: Glacial Cavern
+        { 90, 40, 110, 255 },  // 16-18: Neon Cyberpunk
+        { 130, 100, 35, 255 }, // 19-21: Pharaoh Tomb
+        { 75, 35, 120, 255 }   // 22-24: Cosmic Void
+    };
+
+    for (int lvl = 1; lvl <= 24; ++lvl)
+    {
+        bool unlocked = (lvl <= highestLevel);
+        int biomeIdx = (lvl - 1) / 3;
+        if (biomeIdx < 0) biomeIdx = 0;
+        if (biomeIdx > 7) biomeIdx = 7;
+
+        SDL_Color bgCol = unlocked ? biomeColors[biomeIdx] : SDL_Color{ 25, 30, 40, 255 };
+        SDL_Color txtCol = unlocked ? SDL_Color{ 255, 255, 255, 255 } : SDL_Color{ 90, 100, 115, 255 };
+
+        std::string lvlLabel = unlocked ? std::to_string(lvl) : "LOCK";
+        m_btnLevels[lvl - 1].setLabel(lvlLabel);
+        m_btnLevels[lvl - 1].render(renderer, bgCol, txtCol);
+
+        // Render stars below level number if unlocked
+        if (unlocked)
+        {
+            int s = levelStars[lvl];
+            std::string starText = "";
+            for (int i = 0; i < 3; ++i)
+            {
+                starText += (i < s) ? "*" : "-";
+            }
+            float sw = BitmapFont::getTextWidth(starText, 1.1f);
+            float sx = m_btnLevels[lvl - 1].getRect().x + (m_btnLevels[lvl - 1].getRect().w - sw) / 2.0f;
+            float sy = m_btnLevels[lvl - 1].getRect().y + m_btnLevels[lvl - 1].getRect().h - 15.0f;
+            BitmapFont::drawText(renderer, starText, sx, sy, 1.1f, { 250, 204, 21, 255 });
+        }
+    }
+
+    // Back to Menu button
+    m_btnBack.setPosition(85.0f, 735.0f);
+    m_btnBack.setSize(280.0f, 48.0f);
+    m_btnBack.setLabel("BACK TO MENU");
+    m_btnBack.render(renderer, { 72, 187, 120, 255 });
+}
+
+void HUD::renderSettings(SDL_Renderer* renderer, bool soundOn, int controlMode, bool hapticsOn, bool confirmReset)
+{
+    // Full screen background
+    SDL_FRect bg = { 0.0f, 0.0f, static_cast<float>(Constants::SCREEN_WIDTH), static_cast<float>(Constants::SCREEN_HEIGHT) };
+    SDL_SetRenderDrawColor(renderer, 0x11, 0x14, 0x1d, 0xff);
+    SDL_RenderFillRect(renderer, &bg);
+
+    std::string title = "GAME SETTINGS";
+    float tw = BitmapFont::getTextWidth(title, 2.4f);
+    BitmapFont::drawText(renderer, title, (Constants::SCREEN_WIDTH - tw) / 2.0f, 45.0f, 2.4f, { 246, 224, 94, 255 });
+
+    std::string sub = "CUSTOMIZE YOUR TACTICAL CONTROLS";
+    float subW = BitmapFont::getTextWidth(sub, 1.25f);
+    BitmapFont::drawText(renderer, sub, (Constants::SCREEN_WIDTH - subW) / 2.0f, 85.0f, 1.25f, { 160, 174, 192, 255 });
+
+    // Option 1: Controls
+    std::string ctrlLabel = (controlMode == 0) ? "CONTROLS: BOTH (SWIPE+DPAD)" : 
+                           (controlMode == 1 ? "CONTROLS: SWIPE ONLY" : "CONTROLS: DPAD ONLY");
+    m_btnControls.setPosition(45.0f, 150.0f);
+    m_btnControls.setSize(360.0f, 52.0f);
+    m_btnControls.setLabel(ctrlLabel);
+    m_btnControls.render(renderer, { 45, 55, 72, 255 }, { 255, 255, 255, 255 });
+
+    // Option 2: Sound
+    std::string sndLabel = soundOn ? "8-BIT CHIPTUNE AUDIO: ON" : "8-BIT CHIPTUNE AUDIO: OFF";
+    m_btnSound.setPosition(45.0f, 220.0f);
+    m_btnSound.setSize(360.0f, 52.0f);
+    m_btnSound.setLabel(sndLabel);
+    m_btnSound.render(renderer, soundOn ? SDL_Color{ 43, 108, 176, 255 } : SDL_Color{ 110, 45, 45, 255 });
+
+    // Option 3: Haptics
+    std::string hapLabel = hapticsOn ? "HAPTIC VIBRATION: ON" : "HAPTIC VIBRATION: OFF";
+    m_btnHaptics.setPosition(45.0f, 290.0f);
+    m_btnHaptics.setSize(360.0f, 52.0f);
+    m_btnHaptics.setLabel(hapLabel);
+    m_btnHaptics.render(renderer, hapticsOn ? SDL_Color{ 56, 178, 172, 255 } : SDL_Color{ 80, 80, 80, 255 });
+
+    // Option 4: Reset data
+    std::string resetLabel = confirmReset ? "! TAP AGAIN TO CONFIRM RESET !" : "RESET ALL GAME PROGRESS";
+    m_btnResetData.setPosition(45.0f, 380.0f);
+    m_btnResetData.setSize(360.0f, 52.0f);
+    m_btnResetData.setLabel(resetLabel);
+    m_btnResetData.render(renderer, confirmReset ? SDL_Color{ 200, 40, 40, 255 } : SDL_Color{ 100, 30, 30, 255 },
+                                   { 255, 220, 220, 255 });
+
+    // Back button
+    m_btnBack.setPosition(85.0f, 735.0f);
+    m_btnBack.setSize(280.0f, 48.0f);
+    m_btnBack.setLabel("BACK TO MENU");
+    m_btnBack.render(renderer, { 72, 187, 120, 255 });
+}
+
+void HUD::renderGameWon(SDL_Renderer* renderer, int totalScore, int totalStars)
+{
+    // Full screen overlay with celestial background
+    SDL_FRect bg = { 0.0f, 0.0f, static_cast<float>(Constants::SCREEN_WIDTH), static_cast<float>(Constants::SCREEN_HEIGHT) };
+    SDL_SetRenderDrawColor(renderer, 0x0f, 0x11, 0x1a, 0xff);
+    SDL_RenderFillRect(renderer, &bg);
+
+    std::string title = "CAMPAIGN CONQUERED!";
+    float tw = BitmapFont::getTextWidth(title, 2.5f);
+    BitmapFont::drawText(renderer, title, (Constants::SCREEN_WIDTH - tw) / 2.0f, 50.0f, 2.5f, { 246, 224, 94, 255 });
+
+    std::string sub = "ALL 24 BIOME MISSIONS COMPLETED!";
+    float subW = BitmapFont::getTextWidth(sub, 1.3f);
+    BitmapFont::drawText(renderer, sub, (Constants::SCREEN_WIDTH - subW) / 2.0f, 90.0f, 1.3f, { 72, 187, 120, 255 });
+
+    // Victory Card
+    SDL_FRect card = { 35.0f, 130.0f, static_cast<float>(Constants::SCREEN_WIDTH - 70), 320.0f };
+    SDL_SetRenderDrawColor(renderer, 0x18, 0x1d, 0x2b, 0xff);
+    SDL_RenderFillRect(renderer, &card);
+    SDL_SetRenderDrawColor(renderer, 0xf6, 0xe0, 0x5e, 0xff);
+    SDL_RenderRect(renderer, &card);
+
+    float cy = 155.0f;
+    std::string s1 = "TOTAL STARS: " + std::to_string(totalStars) + " / 72";
+    float w1 = BitmapFont::getTextWidth(s1, 1.8f);
+    BitmapFont::drawText(renderer, s1, (Constants::SCREEN_WIDTH - w1) / 2.0f, cy, 1.8f, { 250, 204, 21, 255 });
+
+    cy += 40.0f;
+    std::string s2 = "FINAL SCORE: " + std::to_string(totalScore);
+    float w2 = BitmapFont::getTextWidth(s2, 1.8f);
+    BitmapFont::drawText(renderer, s2, (Constants::SCREEN_WIDTH - w2) / 2.0f, cy, 1.8f, { 104, 219, 120, 255 });
+
+    cy += 45.0f;
+    std::string s3 = "! ENDLESS MODE UNLOCKED !";
+    float w3 = BitmapFont::getTextWidth(s3, 1.6f);
+    BitmapFont::drawText(renderer, s3, (Constants::SCREEN_WIDTH - w3) / 2.0f, cy, 1.6f, { 99, 179, 237, 255 });
+
+    cy += 35.0f;
+    std::string s4 = "Survive infinite scaling dungeons!";
+    float w4 = BitmapFont::getTextWidth(s4, 1.25f);
+    BitmapFont::drawText(renderer, s4, (Constants::SCREEN_WIDTH - w4) / 2.0f, cy, 1.25f, { 180, 195, 215, 255 });
+
+    cy += 45.0f;
+    std::string s5 = "Created by Prasad Kankhar";
+    float w5 = BitmapFont::getTextWidth(s5, 1.4f);
+    BitmapFont::drawText(renderer, s5, (Constants::SCREEN_WIDTH - w5) / 2.0f, cy, 1.4f, { 246, 224, 94, 255 });
+
+    cy += 24.0f;
+    std::string s6 = "Thank you for playing!";
+    float w6 = BitmapFont::getTextWidth(s6, 1.25f);
+    BitmapFont::drawText(renderer, s6, (Constants::SCREEN_WIDTH - w6) / 2.0f, cy, 1.25f, { 220, 230, 245, 255 });
+
+    // Buttons
+    m_btnEndless.setPosition(85.0f, 480.0f);
+    m_btnEndless.setSize(280.0f, 52.0f);
+    m_btnEndless.setLabel("PLAY ENDLESS MODE");
+    m_btnEndless.render(renderer, { 180, 100, 30, 255 }, { 255, 230, 180, 255 });
+
+    m_btnMenu.setPosition(85.0f, 550.0f);
+    m_btnMenu.setSize(280.0f, 50.0f);
+    m_btnMenu.setLabel("RETURN TO MAIN MENU");
+    m_btnMenu.render(renderer, { 45, 55, 72, 255 });
+}
+
+void HUD::renderTutorialHint(SDL_Renderer* renderer, const std::string& hintText, float alpha)
+{
+    if (hintText.empty() || alpha <= 0.01f) return;
+
+    Uint8 a = static_cast<Uint8>(std::min(alpha, 1.0f) * 230.0f);
+
+    float tw = BitmapFont::getTextWidth(hintText, 1.35f);
+    float boxW = tw + 28.0f;
+    float boxH = 34.0f;
+    float boxX = (Constants::SCREEN_WIDTH - boxW) / 2.0f;
+    float boxY = 88.0f;
+
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
+    SDL_FRect box = { boxX, boxY, boxW, boxH };
+    SDL_SetRenderDrawColor(renderer, 0x11, 0x14, 0x1d, a);
+    SDL_RenderFillRect(renderer, &box);
+
+    SDL_SetRenderDrawColor(renderer, 0xf6, 0xe0, 0x5e, a);
+    SDL_RenderRect(renderer, &box);
+
+    BitmapFont::drawText(renderer, hintText, boxX + 14.0f, boxY + 10.0f, 1.35f, { 255, 255, 255, a });
+}
+
 

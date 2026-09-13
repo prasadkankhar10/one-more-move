@@ -8,5 +8,9 @@ enum class GameState
     LevelComplete,
     GameOver,
     Info,
-    PathPreview
+    PathPreview,
+    LevelSelect,
+    Settings,
+    GameWon
 };
+
