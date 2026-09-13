@@ -192,146 +192,236 @@ void Board::render(SDL_Renderer* renderer, float offsetX, float offsetY)
             switch (tile.type)
             {
                 case TileType::Empty:
+                {
                     SDL_SetRenderDrawColor(renderer, emptyR, emptyG, emptyB, 0xff);
                     SDL_RenderFillRect(renderer, &rect);
                     SDL_SetRenderDrawColor(renderer, outlineR, outlineG, outlineB, 0xff);
                     SDL_RenderRect(renderer, &rect);
+
+                    // Corner notches for high-tech floor plate
+                    SDL_FRect c1 = { rect.x + 2.0f, rect.y + 2.0f, 3.0f, 3.0f };
+                    SDL_FRect c2 = { rect.x + rect.w - 5.0f, rect.y + 2.0f, 3.0f, 3.0f };
+                    SDL_FRect c3 = { rect.x + 2.0f, rect.y + rect.h - 5.0f, 3.0f, 3.0f };
+                    SDL_FRect c4 = { rect.x + rect.w - 5.0f, rect.y + rect.h - 5.0f, 3.0f, 3.0f };
+                    SDL_RenderFillRect(renderer, &c1);
+                    SDL_RenderFillRect(renderer, &c2);
+                    SDL_RenderFillRect(renderer, &c3);
+                    SDL_RenderFillRect(renderer, &c4);
                     break;
+                }
 
                 case TileType::Wall:
+                {
+                    // Dark tech block
                     SDL_SetRenderDrawColor(renderer, wallR, wallG, wallB, 0xff);
                     SDL_RenderFillRect(renderer, &rect);
                     // 3D Bevel highlight
                     SDL_SetRenderDrawColor(renderer, 
-                        static_cast<Uint8>(std::min(255, wallR + 40)),
-                        static_cast<Uint8>(std::min(255, wallG + 40)),
-                        static_cast<Uint8>(std::min(255, wallB + 40)), 0xff);
+                        static_cast<Uint8>(std::min(255, wallR + 35)),
+                        static_cast<Uint8>(std::min(255, wallG + 35)),
+                        static_cast<Uint8>(std::min(255, wallB + 35)), 0xff);
                     SDL_RenderLine(renderer, rect.x, rect.y, rect.x + rect.w, rect.y);
                     SDL_RenderLine(renderer, rect.x, rect.y, rect.x, rect.y + rect.h);
+                    
+                    // Cyber circuit traces (Into the Breach tech wall style)
+                    SDL_SetRenderDrawColor(renderer, 56, 178, 172, 160);
+                    float midY = rect.y + rect.h / 2.0f;
+                    SDL_RenderLine(renderer, rect.x + 6.0f, midY, rect.x + rect.w / 2.0f, midY);
+                    SDL_RenderLine(renderer, rect.x + rect.w / 2.0f, midY, rect.x + rect.w / 2.0f, rect.y + 6.0f);
+                    // Circuit node
+                    SDL_FRect node = { rect.x + rect.w / 2.0f - 2.0f, rect.y + 5.0f, 4.0f, 4.0f };
+                    SDL_RenderFillRect(renderer, &node);
                     break;
+                }
 
                 case TileType::Exit:
                 {
-                    SDL_SetRenderDrawColor(renderer, 0x48, 0xbb, 0x78, 0xff); // Bright green
+                    // Emerald Arch Gate frame
+                    SDL_SetRenderDrawColor(renderer, 0x1a, 0x3d, 0x24, 0xff);
                     SDL_RenderFillRect(renderer, &rect);
-                    // Pulsing exit portal center
-                    SDL_FRect inner = rect;
-                    float pad = 8.0f - (pulse * 3.0f);
-                    inner.x += pad; inner.y += pad;
-                    inner.w -= pad * 2.0f; inner.h -= pad * 2.0f;
-                    SDL_SetRenderDrawColor(renderer, 0x9a, 0xec, 0xa3, 0xff);
-                    SDL_RenderFillRect(renderer, &inner);
+                    
+                    // Glowing green arched portal frame
+                    SDL_SetRenderDrawColor(renderer, 0x48, 0xbb, 0x78, 0xff);
+                    SDL_FRect archOuter = { rect.x + 4.0f, rect.y + 4.0f, rect.w - 8.0f, rect.h - 8.0f };
+                    SDL_RenderRect(renderer, &archOuter);
+
+                    // Inner glowing portal void
+                    SDL_FRect voidBox = { rect.x + 8.0f, rect.y + 8.0f, rect.w - 16.0f, rect.h - 16.0f };
+                    SDL_SetRenderDrawColor(renderer, 0x11, 0x2a, 0x18, 0xff);
+                    SDL_RenderFillRect(renderer, &voidBox);
+
+                    // Chunky directional escape arrow [>]
+                    float cx = rect.x + rect.w / 2.0f;
+                    float cy = rect.y + rect.h / 2.0f;
+                    SDL_SetRenderDrawColor(renderer, (ticks % 400 < 200) ? 0x9a : 0x48, 0xec, 0xa3, 0xff);
+                    SDL_FRect arrowBar = { cx - 6.0f, cy - 3.0f, 8.0f, 6.0f };
+                    SDL_RenderFillRect(renderer, &arrowBar);
+                    SDL_FRect arrowTip1 = { cx + 2.0f, cy - 5.0f, 3.0f, 10.0f };
+                    SDL_FRect arrowTip2 = { cx + 5.0f, cy - 2.0f, 3.0f, 4.0f };
+                    SDL_RenderFillRect(renderer, &arrowTip1);
+                    SDL_RenderFillRect(renderer, &arrowTip2);
                     break;
                 }
 
                 case TileType::Danger:
                 {
-                    SDL_SetRenderDrawColor(renderer, 0xf5, 0x65, 0x65, 0xff); // Red
+                    // Dark steel floor
+                    SDL_SetRenderDrawColor(renderer, 0x22, 0x16, 0x18, 0xff);
                     SDL_RenderFillRect(renderer, &rect);
-                    // Inner warning square
-                    SDL_FRect inner = rect;
-                    inner.x += 10.0f; inner.y += 10.0f;
-                    inner.w -= 20.0f; inner.h -= 20.0f;
+                    
+                    // Horizontal red laser guide bar
                     SDL_SetRenderDrawColor(renderer, 0x74, 0x2a, 0x2a, 0xff);
-                    SDL_RenderFillRect(renderer, &inner);
+                    SDL_FRect bar = { rect.x + 2.0f, rect.y + rect.h / 2.0f - 2.0f, rect.w - 4.0f, 4.0f };
+                    SDL_RenderFillRect(renderer, &bar);
+
+                    // 3 chunky red pixel spikes
+                    SDL_SetRenderDrawColor(renderer, 0xf5, 0x65, 0x65, 0xff);
+                    for (int s = 0; s < 3; ++s)
+                    {
+                        float sx = rect.x + 6.0f + s * 11.0f;
+                        float sy = rect.y + 8.0f;
+                        SDL_FRect tip = { sx + 3.0f, sy, 3.0f, 5.0f };
+                        SDL_FRect mid = { sx + 1.0f, sy + 5.0f, 7.0f, 7.0f };
+                        SDL_FRect base = { sx, sy + 12.0f, 9.0f, 7.0f };
+                        SDL_RenderFillRect(renderer, &tip);
+                        SDL_RenderFillRect(renderer, &mid);
+                        SDL_RenderFillRect(renderer, &base);
+                    }
                     break;
                 }
 
                 case TileType::Trap:
                 {
-                    SDL_SetRenderDrawColor(renderer, 0xed, 0x89, 0x36, 0xff); // Orange
+                    SDL_SetRenderDrawColor(renderer, 0xed, 0x89, 0x36, 0xff);
                     SDL_RenderFillRect(renderer, &rect);
                     break;
                 }
 
                 case TileType::Curse:
                 {
-                    SDL_SetRenderDrawColor(renderer, 0x80, 0x1f, 0x99, 0xff); // Deep purple
+                    // Dark magenta void base
+                    SDL_SetRenderDrawColor(renderer, 0x24, 0x0f, 0x28, 0xff);
                     SDL_RenderFillRect(renderer, &rect);
-                    // Pulsing magenta inner diamond
-                    SDL_FRect inner = rect;
-                    float pad = 8.0f - (pulse * 2.0f);
-                    inner.x += pad; inner.y += pad;
-                    inner.w -= pad * 2.0f; inner.h -= pad * 2.0f;
+
+                    // Chunky Purple Runic Sigil
                     SDL_SetRenderDrawColor(renderer, 0xd5, 0x3f, 0x8c, 0xff);
-                    SDL_RenderFillRect(renderer, &inner);
+                    float cx = rect.x + rect.w / 2.0f;
+                    float cy = rect.y + rect.h / 2.0f;
+                    SDL_FRect vSpire = { cx - 2.0f, rect.y + 6.0f, 4.0f, rect.h - 12.0f };
+                    SDL_RenderFillRect(renderer, &vSpire);
+                    SDL_FRect dBar1 = { cx - 8.0f, cy - 6.0f, 16.0f, 4.0f };
+                    SDL_FRect dBar2 = { cx - 6.0f, cy + 3.0f, 14.0f, 4.0f };
+                    SDL_RenderFillRect(renderer, &dBar1);
+                    SDL_RenderFillRect(renderer, &dBar2);
+                    SDL_FRect thorn1 = { cx - 9.0f, cy - 9.0f, 4.0f, 4.0f };
+                    SDL_FRect thorn2 = { cx + 7.0f, cy + 5.0f, 4.0f, 4.0f };
+                    SDL_RenderFillRect(renderer, &thorn1);
+                    SDL_RenderFillRect(renderer, &thorn2);
                     break;
                 }
 
                 case TileType::Defuse:
                 {
-                    SDL_SetRenderDrawColor(renderer, 0x23, 0x7a, 0x79, 0xff); // Deep teal
+                    // Deep teal base
+                    SDL_SetRenderDrawColor(renderer, 0x11, 0x33, 0x33, 0xff);
                     SDL_RenderFillRect(renderer, &rect);
-                    // Bright cyan cross icon
-                    SDL_FRect centerBox = rect;
-                    centerBox.x += 6.0f; centerBox.y += 6.0f;
-                    centerBox.w -= 12.0f; centerBox.h -= 12.0f;
+
+                    // Chunky Teal Cross / Shears
                     SDL_SetRenderDrawColor(renderer, 0x38, 0xb2, 0xac, 0xff);
-                    SDL_RenderFillRect(renderer, &centerBox);
-                    // White inner dot
-                    SDL_FRect dot = rect;
-                    dot.x += 14.0f; dot.y += 14.0f;
-                    dot.w -= 28.0f; dot.h -= 28.0f;
+                    float cx = rect.x + rect.w / 2.0f;
+                    float cy = rect.y + rect.h / 2.0f;
+                    SDL_FRect vCross = { cx - 4.0f, rect.y + 6.0f, 8.0f, rect.h - 12.0f };
+                    SDL_FRect hCross = { rect.x + 6.0f, cy - 4.0f, rect.w - 12.0f, 8.0f };
+                    SDL_RenderFillRect(renderer, &vCross);
+                    SDL_RenderFillRect(renderer, &hCross);
+
+                    // Center white power rivet
+                    SDL_FRect rivet = { cx - 2.0f, cy - 2.0f, 4.0f, 4.0f };
                     SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xff);
-                    SDL_RenderFillRect(renderer, &dot);
+                    SDL_RenderFillRect(renderer, &rivet);
                     break;
                 }
 
                 case TileType::Ice:
                 {
-                    // Glossy slick ice blue
-                    SDL_SetRenderDrawColor(renderer, 0x76, 0xe4, 0xf7, 0xff);
+                    // Slick dark cyan base
+                    SDL_SetRenderDrawColor(renderer, 0x1b, 0x4f, 0x63, 0xff);
                     SDL_RenderFillRect(renderer, &rect);
-                    // Diagonal gleam lines
-                    SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xcc);
-                    SDL_RenderLine(renderer, rect.x + 6.0f, rect.y + rect.h - 8.0f, rect.x + rect.w - 8.0f, rect.y + 6.0f);
-                    SDL_RenderLine(renderer, rect.x + 14.0f, rect.y + rect.h - 6.0f, rect.x + rect.w - 6.0f, rect.y + 14.0f);
-                    // Subtle border
-                    SDL_SetRenderDrawColor(renderer, 0x0b, 0xc5, 0xea, 0xff);
-                    SDL_RenderRect(renderer, &rect);
+
+                    // Chunky faceted crystal blocks
+                    SDL_SetRenderDrawColor(renderer, 0x76, 0xe4, 0xf7, 0xff);
+                    SDL_FRect cBlock1 = { rect.x + 6.0f, rect.y + 8.0f, 11.0f, 20.0f };
+                    SDL_FRect cBlock2 = { rect.x + 19.0f, rect.y + 6.0f, 13.0f, 24.0f };
+                    SDL_RenderFillRect(renderer, &cBlock1);
+                    SDL_RenderFillRect(renderer, &cBlock2);
+
+                    // White angled light facets
+                    SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xff);
+                    SDL_FRect facet1 = { rect.x + 8.0f, rect.y + 9.0f, 5.0f, 4.0f };
+                    SDL_FRect facet2 = { rect.x + 21.0f, rect.y + 7.0f, 7.0f, 5.0f };
+                    SDL_RenderFillRect(renderer, &facet1);
+                    SDL_RenderFillRect(renderer, &facet2);
                     break;
                 }
 
                 case TileType::Crumbling:
                 {
-                    // Earthy cracked floor
-                    SDL_SetRenderDrawColor(renderer, 0xd6, 0x9e, 0x2e, 0xff); // Amber ochre
+                    // Earthy cracked stone floor
+                    SDL_SetRenderDrawColor(renderer, 0x6e, 0x47, 0x26, 0xff);
                     SDL_RenderFillRect(renderer, &rect);
-                    // Fissure / crack pattern
-                    SDL_SetRenderDrawColor(renderer, 0x74, 0x42, 0x10, 0xff);
-                    SDL_RenderLine(renderer, rect.x + 4.0f, rect.y + 6.0f, rect.x + rect.w / 2.0f, rect.y + rect.h / 2.0f);
-                    SDL_RenderLine(renderer, rect.x + rect.w / 2.0f, rect.y + rect.h / 2.0f, rect.x + rect.w - 6.0f, rect.y + 8.0f);
-                    SDL_RenderLine(renderer, rect.x + rect.w / 2.0f, rect.y + rect.h / 2.0f, rect.x + rect.w / 2.0f + 4.0f, rect.y + rect.h - 4.0f);
+
+                    // Segmented stone blocks
+                    SDL_SetRenderDrawColor(renderer, 0xb7, 0x79, 0x1f, 0xff);
+                    SDL_FRect b1 = { rect.x + 3.0f, rect.y + 3.0f, 14.0f, 13.0f };
+                    SDL_FRect b2 = { rect.x + 20.0f, rect.y + 3.0f, 15.0f, 11.0f };
+                    SDL_FRect b3 = { rect.x + 4.0f, rect.y + 19.0f, 13.0f, 14.0f };
+                    SDL_FRect b4 = { rect.x + 19.0f, rect.y + 16.0f, 16.0f, 17.0f };
+                    SDL_RenderFillRect(renderer, &b1);
+                    SDL_RenderFillRect(renderer, &b2);
+                    SDL_RenderFillRect(renderer, &b3);
+                    SDL_RenderFillRect(renderer, &b4);
+
+                    // Deep black cracks
+                    SDL_SetRenderDrawColor(renderer, 0x24, 0x14, 0x08, 0xff);
+                    SDL_RenderLine(renderer, rect.x, rect.y + 16.0f, rect.x + rect.w, rect.y + 16.0f);
+                    SDL_RenderLine(renderer, rect.x + 17.0f, rect.y, rect.x + 17.0f, rect.y + rect.h);
                     break;
                 }
 
                 case TileType::Pit:
                 {
                     // Bottomless black pit
-                    SDL_SetRenderDrawColor(renderer, 0x0a, 0x0a, 0x0c, 0xff);
+                    SDL_SetRenderDrawColor(renderer, 0x06, 0x05, 0x0a, 0xff);
                     SDL_RenderFillRect(renderer, &rect);
-                    // Dark red/purple edge
-                    SDL_SetRenderDrawColor(renderer, 0x4a, 0x15, 0x25, 0xff);
-                    SDL_RenderRect(renderer, &rect);
+
+                    // Concentric dark void spiral
+                    SDL_SetRenderDrawColor(renderer, 0x3b, 0x16, 0x4d, 0xff);
+                    SDL_FRect ring1 = { rect.x + 4.0f, rect.y + 4.0f, rect.w - 8.0f, rect.h - 8.0f };
+                    SDL_RenderRect(renderer, &ring1);
+                    SDL_SetRenderDrawColor(renderer, 0x5a, 0x1e, 0x73, 0xff);
+                    SDL_FRect ring2 = { rect.x + 9.0f, rect.y + 9.0f, rect.w - 18.0f, rect.h - 18.0f };
+                    SDL_RenderRect(renderer, &ring2);
                     break;
                 }
 
                 case TileType::Portal:
                 {
-                    // Cosmic swirl
-                    SDL_SetRenderDrawColor(renderer, 0x2d, 0x1b, 0x4e, 0xff);
+                    // Cosmic rift foundation
+                    SDL_SetRenderDrawColor(renderer, 0x1a, 0x0d, 0x2e, 0xff);
                     SDL_RenderFillRect(renderer, &rect);
-                    // Pulsing swirling rings
-                    SDL_FRect ring = rect;
-                    float pPad = 6.0f + (pulse * 4.0f);
-                    ring.x += pPad; ring.y += pPad;
-                    ring.w -= pPad * 2.0f; ring.h -= pPad * 2.0f;
-                    SDL_SetRenderDrawColor(renderer, 0xb7, 0x94, 0xf4, 0xff); // Neon violet
-                    SDL_RenderFillRect(renderer, &ring);
-                    // Core
-                    SDL_FRect core = rect;
-                    core.x += 16.0f; core.y += 16.0f;
-                    core.w -= 32.0f; core.h -= 32.0f;
+
+                    // Swirling vortex rings
+                    float pPad = 5.0f + (pulse * 3.0f);
+                    SDL_FRect ring1 = { rect.x + pPad, rect.y + pPad, rect.w - pPad * 2.0f, rect.h - pPad * 2.0f };
+                    SDL_SetRenderDrawColor(renderer, 0xb7, 0x94, 0xf4, 0xff);
+                    SDL_RenderRect(renderer, &ring1);
+
+                    SDL_FRect ring2 = { rect.x + 11.0f, rect.y + 11.0f, rect.w - 22.0f, rect.h - 22.0f };
+                    SDL_SetRenderDrawColor(renderer, 0x4f, 0xd1, 0xc5, 0xff);
+                    SDL_RenderFillRect(renderer, &ring2);
+
+                    // Pure white core singularity
+                    SDL_FRect core = { rect.x + 15.0f, rect.y + 15.0f, 6.0f, 6.0f };
                     SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xff);
                     SDL_RenderFillRect(renderer, &core);
                     break;
@@ -339,113 +429,144 @@ void Board::render(SDL_Renderer* renderer, float offsetX, float offsetY)
 
                 case TileType::Key:
                 {
-                    // Base empty
                     SDL_SetRenderDrawColor(renderer, emptyR, emptyG, emptyB, 0xff);
                     SDL_RenderFillRect(renderer, &rect);
-                    // Golden Key shape
-                    SDL_SetRenderDrawColor(renderer, 0xfa, 0xcc, 0x15, 0xff); // Bright gold
-                    // Key head (ring)
-                    SDL_FRect head = { rect.x + 8.0f, rect.y + 10.0f, 12.0f, 12.0f };
-                    SDL_RenderFillRect(renderer, &head);
-                    // Key head hole
-                    SDL_FRect hole = { rect.x + 11.0f, rect.y + 13.0f, 6.0f, 6.0f };
-                    SDL_SetRenderDrawColor(renderer, emptyR, emptyG, emptyB, 0xff);
-                    SDL_RenderFillRect(renderer, &hole);
-                    // Key stem & tooth
+
+                    // Chunky 16-bit Gold Skeleton Key
                     SDL_SetRenderDrawColor(renderer, 0xfa, 0xcc, 0x15, 0xff);
-                    SDL_FRect stem = { rect.x + 20.0f, rect.y + 14.0f, 12.0f, 4.0f };
+                    SDL_FRect loop = { rect.x + 6.0f, rect.y + 6.0f, 13.0f, 13.0f };
+                    SDL_RenderFillRect(renderer, &loop);
+                    // Cutout
+                    SDL_SetRenderDrawColor(renderer, emptyR, emptyG, emptyB, 0xff);
+                    SDL_FRect hole = { rect.x + 9.0f, rect.y + 9.0f, 7.0f, 7.0f };
+                    SDL_RenderFillRect(renderer, &hole);
+
+                    // Stem & teeth
+                    SDL_SetRenderDrawColor(renderer, 0xfa, 0xcc, 0x15, 0xff);
+                    SDL_FRect stem = { rect.x + 15.0f, rect.y + 15.0f, 14.0f, 5.0f };
                     SDL_RenderFillRect(renderer, &stem);
-                    SDL_FRect tooth = { rect.x + 28.0f, rect.y + 18.0f, 4.0f, 6.0f };
-                    SDL_RenderFillRect(renderer, &tooth);
+                    SDL_FRect t1 = { rect.x + 23.0f, rect.y + 20.0f, 3.0f, 6.0f };
+                    SDL_FRect t2 = { rect.x + 27.0f, rect.y + 20.0f, 3.0f, 5.0f };
+                    SDL_RenderFillRect(renderer, &t1);
+                    SDL_RenderFillRect(renderer, &t2);
                     break;
                 }
 
                 case TileType::Gate:
                 {
-                    // Dark stone door
-                    SDL_SetRenderDrawColor(renderer, 0x2d, 0x37, 0x48, 0xff);
+                    // Heavy iron portcullis frame
+                    SDL_SetRenderDrawColor(renderer, 0x1f, 0x24, 0x2e, 0xff);
                     SDL_RenderFillRect(renderer, &rect);
-                    // Iron bars
-                    SDL_SetRenderDrawColor(renderer, 0x71, 0x80, 0x96, 0xff);
-                    for (float bx = 6.0f; bx < rect.w - 4.0f; bx += 8.0f)
+
+                    // Chunky vertical bars
+                    SDL_SetRenderDrawColor(renderer, 0x4a, 0x55, 0x68, 0xff);
+                    for (float bx = 5.0f; bx < rect.w - 3.0f; bx += 7.0f)
                     {
-                        SDL_RenderLine(renderer, rect.x + bx, rect.y + 4.0f, rect.x + bx, rect.y + rect.h - 4.0f);
+                        SDL_FRect bar = { rect.x + bx, rect.y + 3.0f, 4.0f, rect.h - 6.0f };
+                        SDL_RenderFillRect(renderer, &bar);
                     }
+
                     // Golden Padlock in center
-                    SDL_FRect lock = { rect.x + (rect.w - 14.0f) / 2.0f, rect.y + (rect.h - 12.0f) / 2.0f, 14.0f, 12.0f };
+                    SDL_FRect lockBody = { rect.x + (rect.w - 14.0f) / 2.0f, rect.y + (rect.h - 12.0f) / 2.0f + 2.0f, 14.0f, 11.0f };
                     SDL_SetRenderDrawColor(renderer, 0xfa, 0xcc, 0x15, 0xff);
-                    SDL_RenderFillRect(renderer, &lock);
+                    SDL_RenderFillRect(renderer, &lockBody);
+                    // Black keyhole
+                    SDL_FRect kh = { rect.x + rect.w / 2.0f - 1.0f, lockBody.y + 3.0f, 2.0f, 4.0f };
+                    SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xff);
+                    SDL_RenderFillRect(renderer, &kh);
                     break;
                 }
 
                 case TileType::Bomb:
                 {
-                    // Base empty
                     SDL_SetRenderDrawColor(renderer, emptyR, emptyG, emptyB, 0xff);
                     SDL_RenderFillRect(renderer, &rect);
-                    // Round bomb body
-                    SDL_FRect bombBody = { rect.x + 10.0f, rect.y + 12.0f, rect.w - 20.0f, rect.h - 20.0f };
+
+                    // Chunky Cyber Bomb
                     SDL_SetRenderDrawColor(renderer, 0x1a, 0x20, 0x2c, 0xff);
+                    SDL_FRect bombBody = { rect.x + 8.0f, rect.y + 10.0f, rect.w - 16.0f, rect.h - 17.0f };
                     SDL_RenderFillRect(renderer, &bombBody);
-                    // Fuse cap & burning spark
-                    SDL_FRect cap = { rect.x + rect.w / 2.0f - 3.0f, rect.y + 8.0f, 6.0f, 4.0f };
+
+                    // Red digital countdown face [0:0]
+                    SDL_SetRenderDrawColor(renderer, 0xe5, 0x3e, 0x3e, 0xff);
+                    SDL_FRect clockFace = { rect.x + 12.0f, rect.y + 15.0f, 14.0f, 7.0f };
+                    SDL_RenderFillRect(renderer, &clockFace);
+
+                    // Fuse and spark
                     SDL_SetRenderDrawColor(renderer, 0x71, 0x80, 0x96, 0xff);
+                    SDL_FRect cap = { rect.x + rect.w / 2.0f - 3.0f, rect.y + 7.0f, 6.0f, 3.0f };
                     SDL_RenderFillRect(renderer, &cap);
-                    // Spark
-                    SDL_FRect spark = { rect.x + rect.w / 2.0f - 2.0f, rect.y + 4.0f, 4.0f, 4.0f };
                     SDL_SetRenderDrawColor(renderer, (ticks % 200 < 100) ? 0xff : 0xed, 0x89, 0x36, 0xff);
+                    SDL_FRect spark = { rect.x + rect.w / 2.0f - 2.0f, rect.y + 3.0f, 4.0f, 4.0f };
                     SDL_RenderFillRect(renderer, &spark);
                     break;
                 }
 
                 case TileType::Shield:
                 {
-                    // Base empty
                     SDL_SetRenderDrawColor(renderer, emptyR, emptyG, emptyB, 0xff);
                     SDL_RenderFillRect(renderer, &rect);
-                    // Pulsing shield emblem
-                    SDL_FRect sRect = rect;
-                    sRect.x += 8.0f; sRect.y += 6.0f;
-                    sRect.w -= 16.0f; sRect.h -= 12.0f;
-                    SDL_SetRenderDrawColor(renderer, 0x31, 0x82, 0xce, 0xff); // Deep azure
-                    SDL_RenderFillRect(renderer, &sRect);
-                    // Inner crest
-                    SDL_FRect crest = sRect;
-                    crest.x += 4.0f; crest.y += 4.0f;
-                    crest.w -= 8.0f; crest.h -= 8.0f;
-                    SDL_SetRenderDrawColor(renderer, 0x90, 0xcd, 0xf4, 0xff); // Light cyan
-                    SDL_RenderFillRect(renderer, &crest);
+
+                    // Chunky Energy Shield Crest
+                    SDL_SetRenderDrawColor(renderer, 0x00, 0xb5, 0xd8, 0xff);
+                    SDL_FRect sOuter = { rect.x + 7.0f, rect.y + 6.0f, rect.w - 14.0f, rect.h - 11.0f };
+                    SDL_RenderFillRect(renderer, &sOuter);
+
+                    // Inner cyber core
+                    SDL_SetRenderDrawColor(renderer, 0x1a, 0x36, 0x5d, 0xff);
+                    SDL_FRect sInner = { rect.x + 10.0f, rect.y + 9.0f, rect.w - 20.0f, rect.h - 17.0f };
+                    SDL_RenderFillRect(renderer, &sInner);
+
+                    // Bright center glyph
+                    SDL_SetRenderDrawColor(renderer, 0x63, 0xb3, 0xed, 0xff);
+                    SDL_FRect sGlyph = { rect.x + rect.w / 2.0f - 2.0f, rect.y + 12.0f, 4.0f, 7.0f };
+                    SDL_RenderFillRect(renderer, &sGlyph);
                     break;
                 }
 
                 case TileType::TimeFreeze:
                 {
-                    // Base empty
                     SDL_SetRenderDrawColor(renderer, emptyR, emptyG, emptyB, 0xff);
                     SDL_RenderFillRect(renderer, &rect);
-                    // Hourglass shape
-                    SDL_FRect hOuter = { rect.x + 10.0f, rect.y + 6.0f, rect.w - 20.0f, rect.h - 12.0f };
-                    SDL_SetRenderDrawColor(renderer, 0x00, 0xb5, 0xd8, 0xff); // Cyan clock
-                    SDL_RenderRect(renderer, &hOuter);
-                    // Inner sand/time diamond
-                    SDL_FRect hInner = { rect.x + 14.0f, rect.y + 10.0f, rect.w - 28.0f, rect.h - 20.0f };
-                    SDL_SetRenderDrawColor(renderer, 0xe6, 0xff, 0xfa, 0xff);
-                    SDL_RenderFillRect(renderer, &hInner);
+
+                    // Chunky Hourglass Frame (Gold caps)
+                    SDL_SetRenderDrawColor(renderer, 0xd6, 0x9e, 0x2e, 0xff);
+                    SDL_FRect topCap = { rect.x + 8.0f, rect.y + 6.0f, rect.w - 16.0f, 4.0f };
+                    SDL_FRect btmCap = { rect.x + 8.0f, rect.y + rect.h - 10.0f, rect.w - 16.0f, 4.0f };
+                    SDL_RenderFillRect(renderer, &topCap);
+                    SDL_RenderFillRect(renderer, &btmCap);
+
+                    // Cyan glass core with golden sand
+                    SDL_SetRenderDrawColor(renderer, 0x00, 0xb5, 0xd8, 0xff);
+                    SDL_FRect glass = { rect.x + 11.0f, rect.y + 10.0f, rect.w - 22.0f, rect.h - 20.0f };
+                    SDL_RenderRect(renderer, &glass);
+
+                    // Center golden frozen X
+                    SDL_SetRenderDrawColor(renderer, 0xfa, 0xcc, 0x15, 0xff);
+                    SDL_FRect sand = { rect.x + rect.w / 2.0f - 3.0f, rect.y + rect.h / 2.0f - 3.0f, 6.0f, 6.0f };
+                    SDL_RenderFillRect(renderer, &sand);
                     break;
                 }
 
                 case TileType::Coin:
                 {
-                    // Base empty
                     SDL_SetRenderDrawColor(renderer, emptyR, emptyG, emptyB, 0xff);
                     SDL_RenderFillRect(renderer, &rect);
-                    // Gold Coin disk
-                    SDL_FRect coinDisk = { rect.x + 10.0f, rect.y + 10.0f, rect.w - 20.0f, rect.h - 20.0f };
-                    SDL_SetRenderDrawColor(renderer, 0xd6, 0x9e, 0x2e, 0xff); // Dark gold edge
-                    SDL_RenderFillRect(renderer, &coinDisk);
-                    SDL_FRect coinInner = { rect.x + 13.0f, rect.y + 13.0f, rect.w - 26.0f, rect.h - 26.0f };
-                    SDL_SetRenderDrawColor(renderer, 0xfa, 0xcc, 0x15, 0xff); // Shiny center
-                    SDL_RenderFillRect(renderer, &coinInner);
+
+                    // Chunky Hexagonal Gold Coin
+                    SDL_SetRenderDrawColor(renderer, 0xd6, 0x9e, 0x2e, 0xff);
+                    SDL_FRect coinBase = { rect.x + 7.0f, rect.y + 7.0f, rect.w - 14.0f, rect.h - 14.0f };
+                    SDL_RenderFillRect(renderer, &coinBase);
+
+                    // Shiny center face
+                    SDL_SetRenderDrawColor(renderer, 0xfa, 0xcc, 0x15, 0xff);
+                    SDL_FRect coinFace = { rect.x + 10.0f, rect.y + 10.0f, rect.w - 20.0f, rect.h - 20.0f };
+                    SDL_RenderFillRect(renderer, &coinFace);
+
+                    // Embossed center glyph
+                    SDL_SetRenderDrawColor(renderer, 0x97, 0x5a, 0x16, 0xff);
+                    SDL_FRect emblem = { rect.x + rect.w / 2.0f - 3.0f, rect.y + rect.h / 2.0f - 3.0f, 6.0f, 6.0f };
+                    SDL_RenderFillRect(renderer, &emblem);
                     break;
                 }
             }
