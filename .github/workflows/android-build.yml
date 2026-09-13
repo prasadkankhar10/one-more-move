@@ -73,10 +73,14 @@ jobs:
           ./gradlew assembleDebug -PBUILD_WITH_CMAKE=true
 
       # 6. Upload the compiled APK so the user can download it directly from GitHub
+      - name: Prepare Named APK Package
+        run: |
+          cp android-build/app/build/outputs/apk/debug/app-debug.apk android-build/app/build/outputs/apk/debug/OneMoreMove.apk
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: OneMoreMove-Android-Debug-APK
-          path: android-build/app/build/outputs/apk/debug/app-debug.apk
+          name: OneMoreMove-Android-APK
+          path: android-build/app/build/outputs/apk/debug/OneMoreMove.apk
           if-no-files-found: error
           retention-days: 7
