@@ -12,6 +12,69 @@ HUD::~HUD()
 {
 }
 
+void HUD::drawStar(SDL_Renderer* renderer, float cx, float cy, float radius, SDL_Color color)
+{
+    SDL_Vertex vertices[11];
+    vertices[0].position = { cx, cy };
+    vertices[0].color = { color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f };
+
+    float innerRadius = radius * 0.42f;
+    for (int i = 0; i < 10; ++i)
+    {
+        float angle = i * 3.14159265f / 5.0f - 1.5707963f;
+        float r = (i % 2 == 0) ? radius : innerRadius;
+        vertices[i + 1].position = { cx + std::cos(angle) * r, cy + std::sin(angle) * r };
+        vertices[i + 1].color = vertices[0].color;
+    }
+
+    int indices[30];
+    for (int i = 0; i < 10; ++i)
+    {
+        indices[i * 3 + 0] = 0;
+        indices[i * 3 + 1] = i + 1;
+        indices[i * 3 + 2] = (i == 9) ? 1 : (i + 2);
+    }
+
+    SDL_RenderGeometry(renderer, nullptr, vertices, 11, indices, 30);
+}
+
+void HUD::drawLogoBadge(SDL_Renderer* renderer, float cx, float cy, float scale)
+{
+    float r = 24.0f * scale;
+
+    // Outer glow hex outline
+    SDL_SetRenderDrawColor(renderer, 56, 178, 172, 180);
+    for (int i = 0; i < 6; ++i)
+    {
+        float a1 = i * 3.14159265f / 3.0f - 1.5707963f;
+        float a2 = (i + 1) * 3.14159265f / 3.0f - 1.5707963f;
+        SDL_RenderLine(renderer, cx + std::cos(a1) * (r + 4.0f), cy + std::sin(a1) * (r + 4.0f),
+                                cx + std::cos(a2) * (r + 4.0f), cy + std::sin(a2) * (r + 4.0f));
+    }
+
+    // Inner filled hexagon
+    SDL_Vertex hexVerts[7];
+    hexVerts[0].position = { cx, cy };
+    hexVerts[0].color = { 0.10f, 0.13f, 0.20f, 1.0f };
+    for (int i = 0; i < 6; ++i)
+    {
+        float a = i * 3.14159265f / 3.0f - 1.5707963f;
+        hexVerts[i + 1].position = { cx + std::cos(a) * r, cy + std::sin(a) * r };
+        hexVerts[i + 1].color = { 0.16f, 0.22f, 0.32f, 1.0f };
+    }
+    int hexIdx[18];
+    for (int i = 0; i < 6; ++i)
+    {
+        hexIdx[i * 3 + 0] = 0;
+        hexIdx[i * 3 + 1] = i + 1;
+        hexIdx[i * 3 + 2] = (i == 5) ? 1 : (i + 2);
+    }
+    SDL_RenderGeometry(renderer, nullptr, hexVerts, 7, hexIdx, 18);
+
+    // Inner gold star core
+    drawStar(renderer, cx, cy, 11.0f * scale, { 250, 204, 21, 255 });
+}
+
 void HUD::init()
 {
     // Initialize gameplay headers
@@ -227,20 +290,23 @@ void HUD::renderPlaying(SDL_Renderer* renderer, int level, int moves, int score,
 
 void HUD::renderMainMenu(SDL_Renderer* renderer, int highScore, int highestLevel, int controlMode, int totalStars, bool campaignCompleted)
 {
+    // Draw Emblem Logo Badge at top of screen
+    drawLogoBadge(renderer, Constants::SCREEN_WIDTH / 2.0f, 36.0f, 0.9f);
+
     // Draw Title: ONE MORE MOVE with shadow
     std::string title = "ONE MORE MOVE";
-    float scale = 3.2f;
+    float scale = 3.0f;
     float titleWidth = BitmapFont::getTextWidth(title, scale);
     float titleX = (Constants::SCREEN_WIDTH - titleWidth) / 2.0f;
 
     // Drop shadow
-    BitmapFont::drawText(renderer, title, titleX + 3.0f, 68.0f, scale, { 0, 0, 0, 180 });
+    BitmapFont::drawText(renderer, title, titleX + 2.0f, 70.0f, scale, { 0, 0, 0, 180 });
     // Title Gold
-    BitmapFont::drawText(renderer, title, titleX, 65.0f, scale, { 246, 224, 94, 255 });
+    BitmapFont::drawText(renderer, title, titleX, 68.0f, scale, { 246, 224, 94, 255 });
 
     // Subtitle
     std::string sub = "TACTICAL ESCAPE";
-    float subScale = 1.6f;
+    float subScale = 1.5f;
     float subWidth = BitmapFont::getTextWidth(sub, subScale);
     float subX = (Constants::SCREEN_WIDTH - subWidth) / 2.0f;
     BitmapFont::drawText(renderer, sub, subX, 108.0f, subScale, { 160, 174, 192, 255 });
@@ -269,7 +335,10 @@ void HUD::renderMainMenu(SDL_Renderer* renderer, int highScore, int highestLevel
     ss.str("");
     ss << "STARS COLLECTED: " << totalStars << " / 72";
     float sw2 = BitmapFont::getTextWidth(ss.str(), 1.5f);
-    BitmapFont::drawText(renderer, ss.str(), (Constants::SCREEN_WIDTH - sw2) / 2.0f, 192.0f, 1.5f, { 250, 204, 21, 255 });
+    float starLineX = (Constants::SCREEN_WIDTH - sw2) / 2.0f;
+    BitmapFont::drawText(renderer, ss.str(), starLineX, 192.0f, 1.5f, { 250, 204, 21, 255 });
+    drawStar(renderer, starLineX - 14.0f, 198.0f, 6.5f, { 250, 204, 21, 255 });
+    drawStar(renderer, starLineX + sw2 + 14.0f, 198.0f, 6.5f, { 250, 204, 21, 255 });
 
     ss.str("");
     ss << "BEST SCORE: " << highScore;
@@ -437,15 +506,24 @@ void HUD::renderLevelComplete(SDL_Renderer* renderer, int level, int score, int 
     float tx = (Constants::SCREEN_WIDTH - textWidth) / 2.0f;
     BitmapFont::drawText(renderer, lvlSS.str(), tx, 175.0f, 1.8f, { 255, 255, 255, 255 });
 
-    // Stars Rating
-    // We draw stars using '*' character from our custom bitmap font
-    std::string starsStr = "";
+    // Stars Rating: 3 large glowing vector stars
+    float starCenter = Constants::SCREEN_WIDTH / 2.0f;
+    float starY = 228.0f;
+    float starGap = 44.0f;
     for (int i = 0; i < 3; ++i)
     {
-        starsStr += (i < stars) ? " * " : " - ";
+        float sx = starCenter + (i - 1) * starGap;
+        bool earned = (i < stars);
+        if (earned)
+        {
+            drawStar(renderer, sx, starY, 19.0f, { 255, 230, 80, 110 }); // Glow aura
+            drawStar(renderer, sx, starY, 15.0f, { 250, 204, 21, 255 }); // Gold core
+        }
+        else
+        {
+            drawStar(renderer, sx, starY, 14.0f, { 55, 65, 80, 255 }); // Dimmed unfilled
+        }
     }
-    float stW = BitmapFont::getTextWidth(starsStr, 2.5f);
-    BitmapFont::drawText(renderer, starsStr, (Constants::SCREEN_WIDTH - stW) / 2.0f, 230.0f, 2.5f, { 246, 224, 94, 255 }); // Gold stars
 
     // Stats
     std::stringstream ss;
@@ -513,45 +591,31 @@ void HUD::renderInfo(SDL_Renderer* renderer, int currentTab)
     if (currentTab == 0) // HOW TO PLAY
     {
         float cy = 118.0f;
-        BitmapFont::drawText(renderer, "MISSION OBJECTIVE", 28.0f, cy, 1.7f, { 72, 187, 120, 255 });
-        cy += 24.0f;
-        BitmapFont::drawText(renderer, "Navigate golden hero to green EXIT", 28.0f, cy, 1.3f, { 220, 230, 242, 255 });
-        cy += 18.0f;
-        BitmapFont::drawText(renderer, "tile before countdown reaches zero!", 28.0f, cy, 1.3f, { 220, 230, 242, 255 });
+        float maxW = card.w - 28.0f;
 
-        cy += 28.0f;
-        BitmapFont::drawText(renderer, "CONTROLS & MOVEMENT", 28.0f, cy, 1.7f, { 246, 224, 94, 255 });
-        cy += 24.0f;
-        BitmapFont::drawText(renderer, "- SWIPE 4 directions anywhere on screen.", 28.0f, cy, 1.25f, { 200, 210, 225, 255 });
-        cy += 18.0f;
-        BitmapFont::drawText(renderer, "- Or TAP the on-screen tactile D-Pad.", 28.0f, cy, 1.25f, { 200, 210, 225, 255 });
-        cy += 18.0f;
-        BitmapFont::drawText(renderer, "- Toggle SWIPE, DPAD, or BOTH anytime.", 28.0f, cy, 1.25f, { 200, 210, 225, 255 });
+        BitmapFont::drawText(renderer, "MISSION OBJECTIVE", 28.0f, cy, 1.6f, { 72, 187, 120, 255 });
+        cy += 22.0f;
+        cy = BitmapFont::drawTextWrapped(renderer, "Navigate golden hero to green EXIT tile before the countdown reaches zero!", 28.0f, cy, maxW, 1.2f, { 220, 230, 242, 255 }, 16.0f);
 
-        cy += 28.0f;
-        BitmapFont::drawText(renderer, "TIMER & SUDDEN DEATH", 28.0f, cy, 1.7f, { 245, 101, 101, 255 });
-        cy += 24.0f;
-        BitmapFont::drawText(renderer, "- Each level has a strict countdown.", 28.0f, cy, 1.25f, { 200, 210, 225, 255 });
-        cy += 18.0f;
-        BitmapFont::drawText(renderer, "- Under 5s: BGM accelerates urgently!", 28.0f, cy, 1.25f, { 200, 210, 225, 255 });
-        cy += 18.0f;
-        BitmapFont::drawText(renderer, "- Out of time = INSTANT GAME OVER!", 28.0f, cy, 1.25f, { 245, 101, 101, 255 });
+        cy += 12.0f;
+        BitmapFont::drawText(renderer, "CONTROLS & MOVEMENT", 28.0f, cy, 1.6f, { 246, 224, 94, 255 });
+        cy += 22.0f;
+        cy = BitmapFont::drawTextWrapped(renderer, "- Swipe in 4 directions anywhere on screen.\n- Or tap the on-screen tactile D-Pad.\n- Toggle control modes anytime in Settings.", 28.0f, cy, maxW, 1.15f, { 200, 210, 225, 255 }, 16.0f);
 
-        cy += 28.0f;
-        BitmapFont::drawText(renderer, "TACTICAL BUTTONS", 28.0f, cy, 1.7f, { 99, 179, 237, 255 });
-        cy += 24.0f;
-        BitmapFont::drawText(renderer, "- [GIVE]: Concede & retry current level.", 28.0f, cy, 1.25f, { 200, 210, 225, 255 });
-        cy += 18.0f;
-        BitmapFont::drawText(renderer, "- [LVL 1]: Restart run from Level 1.", 28.0f, cy, 1.25f, { 200, 210, 225, 255 });
-        cy += 18.0f;
-        BitmapFont::drawText(renderer, "- [II]: Pause game and access menu.", 28.0f, cy, 1.25f, { 200, 210, 225, 255 });
+        cy += 12.0f;
+        BitmapFont::drawText(renderer, "TIMER & SUDDEN DEATH", 28.0f, cy, 1.6f, { 245, 101, 101, 255 });
+        cy += 22.0f;
+        cy = BitmapFont::drawTextWrapped(renderer, "- Each level has a strict countdown timer.\n- Under 5s: BGM accelerates urgently!\n- Out of time = Sudden Death Game Over!", 28.0f, cy, maxW, 1.15f, { 200, 210, 225, 255 }, 16.0f);
 
-        cy += 28.0f;
-        BitmapFont::drawText(renderer, "SCORING & 3-STAR SYSTEM", 28.0f, cy, 1.7f, { 246, 224, 94, 255 });
-        cy += 24.0f;
-        BitmapFont::drawText(renderer, "- Complete levels in fewer moves and faster", 28.0f, cy, 1.25f, { 200, 210, 225, 255 });
-        cy += 18.0f;
-        BitmapFont::drawText(renderer, "  times to unlock 3 STARS and high score!", 28.0f, cy, 1.25f, { 200, 210, 225, 255 });
+        cy += 12.0f;
+        BitmapFont::drawText(renderer, "TACTICAL BUTTONS", 28.0f, cy, 1.6f, { 99, 179, 237, 255 });
+        cy += 22.0f;
+        cy = BitmapFont::drawTextWrapped(renderer, "- [GIVE]: Concede and retry current level.\n- [LVL 1]: Restart run from Level 1.\n- [II]: Pause game and access settings.", 28.0f, cy, maxW, 1.15f, { 200, 210, 225, 255 }, 16.0f);
+
+        cy += 12.0f;
+        BitmapFont::drawText(renderer, "SCORING & 3-STAR RATING", 28.0f, cy, 1.6f, { 246, 224, 94, 255 });
+        cy += 22.0f;
+        cy = BitmapFont::drawTextWrapped(renderer, "Clear levels in fewer moves and faster times to unlock 3 STARS and set record scores!", 28.0f, cy, maxW, 1.15f, { 200, 210, 225, 255 }, 16.0f);
     }
     else if (currentTab == 1) // ALL TILES & ITEMS
     {
@@ -562,19 +626,19 @@ void HUD::renderInfo(SDL_Renderer* renderer, int currentTab)
         };
 
         TileInfo items[] = {
-            { "EXIT",     "Goal tile! Step here to finish level", { 72, 187, 120, 255 } },
-            { "DANGER",   "Fatal spikes & traps on contact!",     { 245, 101, 101, 255 } },
+            { "EXIT",     "Goal tile! Step here to clear level",  { 72, 187, 120, 255 } },
+            { "DANGER",   "Fatal traps & spikes on contact!",     { 245, 101, 101, 255 } },
             { "ICE",      "Slick ice. Slide until obstacle",      { 118, 228, 247, 255 } },
-            { "CRUMB",    "Fragile stone. Falls into pit!",       { 214, 158, 46, 255 } },
+            { "CRUMB",    "Fragile stone. Collapses into pit!",   { 214, 158, 46, 255 } },
             { "PIT",      "Bottomless void. Instant death!",      { 120, 120, 140, 255 } },
-            { "PORTAL",   "Cosmic rift linking two portals",      { 183, 148, 244, 255 } },
+            { "PORTAL",   "Cosmic rift linking paired portals",   { 183, 148, 244, 255 } },
             { "KEY/GATE", "Golden key unlatches locked gate",     { 250, 204, 21, 255 } },
             { "BOMB",     "Detonates 3x3 blast clearing walls",   { 140, 150, 170, 255 } },
-            { "SHIELD",   "Protective crest absorbs 1 death",     { 49, 130, 206, 255 } },
-            { "FREEZE",   "Hourglass pauses timer for 8.0s",      { 0, 181, 216, 255 } },
-            { "COIN",     "Shiny bonus treasure grants +500 PTS", { 250, 204, 21, 255 } },
-            { "CURSE",    "Purple debuff reverses hero moves",    { 213, 63, 140, 255 } },
-            { "DEFUSE",   "Teal cross cures curse & traps",       { 56, 178, 172, 255 } }
+            { "SHIELD",   "Energy crest absorbs 1 death hit",     { 49, 130, 206, 255 } },
+            { "FREEZE",   "Hourglass freezes time for 8.0s",      { 0, 181, 216, 255 } },
+            { "COIN",     "Bonus treasure grants +500 PTS",       { 250, 204, 21, 255 } },
+            { "CURSE",    "Purple debuff reverses controls",      { 213, 63, 140, 255 } },
+            { "DEFUSE",   "Teal cross disarms nearby traps",      { 56, 178, 172, 255 } }
         };
 
         float startY = 112.0f;
@@ -590,49 +654,48 @@ void HUD::renderInfo(SDL_Renderer* renderer, int currentTab)
             SDL_RenderFillRect(renderer, &iconRect);
 
             // Name
-            BitmapFont::drawText(renderer, items[i].name, 56.0f, ry + 2.0f, 1.5f, items[i].col);
+            BitmapFont::drawText(renderer, items[i].name, 56.0f, ry + 2.0f, 1.4f, items[i].col);
 
             // Desc
-            BitmapFont::drawText(renderer, items[i].desc, 56.0f, ry + 22.0f, 1.25f, { 190, 205, 225, 255 });
+            BitmapFont::drawText(renderer, items[i].desc, 56.0f, ry + 20.0f, 1.15f, { 190, 205, 225, 255 });
         }
     }
     else if (currentTab == 2) // DEVELOPER INFO
     {
-        float cy = 120.0f;
-        BitmapFont::drawText(renderer, "ONE MORE MOVE", 28.0f, cy, 2.4f, { 246, 224, 94, 255 });
+        float cy = 118.0f;
+        float maxW = card.w - 28.0f;
+
+        BitmapFont::drawText(renderer, "ONE MORE MOVE", 28.0f, cy, 2.2f, { 246, 224, 94, 255 });
+        cy += 26.0f;
+        BitmapFont::drawText(renderer, "TACTICAL ESCAPE - RETRO EDITION", 28.0f, cy, 1.25f, { 160, 174, 192, 255 });
+
         cy += 28.0f;
-        BitmapFont::drawText(renderer, "TACTICAL ESCAPE - RETRO EDITION", 28.0f, cy, 1.35f, { 160, 174, 192, 255 });
+        BitmapFont::drawText(renderer, "CREATOR & LEAD DEVELOPER", 28.0f, cy, 1.6f, { 72, 187, 120, 255 });
+        cy += 22.0f;
+        BitmapFont::drawText(renderer, "Prasad Kankhar", 28.0f, cy, 1.5f, { 255, 255, 255, 255 });
+        cy += 18.0f;
+        BitmapFont::drawText(renderer, "Lead Game Designer & Programmer", 28.0f, cy, 1.2f, { 180, 195, 215, 255 });
 
-        cy += 30.0f;
-        BitmapFont::drawText(renderer, "CREATOR & LEAD DEVELOPER", 28.0f, cy, 1.8f, { 72, 187, 120, 255 });
-        cy += 24.0f;
-        BitmapFont::drawText(renderer, "Prasad Kankhar", 28.0f, cy, 1.6f, { 255, 255, 255, 255 });
-        cy += 20.0f;
-        BitmapFont::drawText(renderer, "Lead Game Designer & Programmer", 28.0f, cy, 1.3f, { 180, 195, 215, 255 });
+        cy += 26.0f;
+        BitmapFont::drawText(renderer, "ENGINE & TECH ARCHITECTURE", 28.0f, cy, 1.6f, { 99, 179, 237, 255 });
+        cy += 22.0f;
+        BitmapFont::drawText(renderer, "- Language: Modern ISO C++20", 28.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        cy += 17.0f;
+        BitmapFont::drawText(renderer, "- Graphics: SDL3 Vector & Geometry", 28.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        cy += 17.0f;
+        BitmapFont::drawText(renderer, "- Font: Custom Code-Synthesized CP437", 28.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        cy += 17.0f;
+        BitmapFont::drawText(renderer, "- Audio: 100% Procedural 8-Bit Chiptune", 28.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        cy += 17.0f;
+        BitmapFont::drawText(renderer, "- APK Size: Ultra-light (<5 MB)", 28.0f, cy, 1.2f, { 200, 210, 225, 255 });
+        cy += 17.0f;
+        BitmapFont::drawText(renderer, "- Platform: Android Native & Desktop", 28.0f, cy, 1.2f, { 200, 210, 225, 255 });
 
-        cy += 30.0f;
-        BitmapFont::drawText(renderer, "ENGINE & TECH ARCHITECTURE", 28.0f, cy, 1.8f, { 99, 179, 237, 255 });
-        cy += 24.0f;
-        BitmapFont::drawText(renderer, "- Language: Modern ISO C++20", 28.0f, cy, 1.3f, { 200, 210, 225, 255 });
-        cy += 18.0f;
-        BitmapFont::drawText(renderer, "- Graphics: SDL3 Vector & Geometry", 28.0f, cy, 1.3f, { 200, 210, 225, 255 });
-        cy += 18.0f;
-        BitmapFont::drawText(renderer, "- Font: Custom Code-Synthesized CP437", 28.0f, cy, 1.3f, { 200, 210, 225, 255 });
-        cy += 18.0f;
-        BitmapFont::drawText(renderer, "- Audio: 100% Procedural 8-Bit Chiptune", 28.0f, cy, 1.3f, { 200, 210, 225, 255 });
-        cy += 18.0f;
-        BitmapFont::drawText(renderer, "- APK Size: Ultra-light (<5 MB)", 28.0f, cy, 1.3f, { 200, 210, 225, 255 });
-        cy += 18.0f;
-        BitmapFont::drawText(renderer, "- Platform: Android Native & Desktop", 28.0f, cy, 1.3f, { 200, 210, 225, 255 });
-
-        cy += 30.0f;
-        BitmapFont::drawText(renderer, "DESIGN PHILOSOPHY", 28.0f, cy, 1.8f, { 246, 224, 94, 255 });
-        cy += 24.0f;
-        BitmapFont::drawText(renderer, "Built to deliver the pure, intense thrill", 28.0f, cy, 1.3f, { 220, 230, 245, 255 });
-        cy += 18.0f;
-        BitmapFont::drawText(renderer, "of retro tactical gaming where every single", 28.0f, cy, 1.3f, { 220, 230, 245, 255 });
-        cy += 18.0f;
-        BitmapFont::drawText(renderer, "move counts. Think fast, plan, and escape!", 28.0f, cy, 1.3f, { 220, 230, 245, 255 });
+        cy += 26.0f;
+        BitmapFont::drawText(renderer, "DESIGN PHILOSOPHY", 28.0f, cy, 1.6f, { 246, 224, 94, 255 });
+        cy += 22.0f;
+        std::string philosophy = "Built to deliver the pure, intense thrill of retro tactical gaming where every single move counts. Think fast, plan, and escape!";
+        cy = BitmapFont::drawTextWrapped(renderer, philosophy, 28.0f, cy, maxW, 1.15f, { 220, 230, 245, 255 }, 18.0f);
     }
 
     // Back to Menu Button
@@ -709,19 +772,19 @@ void HUD::renderLevelSelect(SDL_Renderer* renderer, int highestLevel, const int 
         m_btnLevels[lvl - 1].setLabel(lvlLabel);
         m_btnLevels[lvl - 1].render(renderer, bgCol, txtCol);
 
-        // Render stars below level number if unlocked
+        // Render 3 vector stars below level number if unlocked
         if (unlocked)
         {
             int s = levelStars[lvl];
-            std::string starText = "";
+            float starBaseY = m_btnLevels[lvl - 1].getY() + m_btnLevels[lvl - 1].getH() - 11.0f;
+            float btnCenterX = m_btnLevels[lvl - 1].getX() + m_btnLevels[lvl - 1].getW() / 2.0f;
+            float starSpacing = 16.0f;
             for (int i = 0; i < 3; ++i)
             {
-                starText += (i < s) ? "*" : "-";
+                float sx = btnCenterX + (i - 1) * starSpacing;
+                SDL_Color starCol = (i < s) ? SDL_Color{ 250, 204, 21, 255 } : SDL_Color{ 60, 70, 85, 255 };
+                drawStar(renderer, sx, starBaseY, 4.2f, starCol);
             }
-            float sw = BitmapFont::getTextWidth(starText, 1.1f);
-            float sx = m_btnLevels[lvl - 1].getRect().x + (m_btnLevels[lvl - 1].getRect().w - sw) / 2.0f;
-            float sy = m_btnLevels[lvl - 1].getRect().y + m_btnLevels[lvl - 1].getRect().h - 15.0f;
-            BitmapFont::drawText(renderer, starText, sx, sy, 1.1f, { 250, 204, 21, 255 });
         }
     }
 
@@ -792,12 +855,12 @@ void HUD::renderGameWon(SDL_Renderer* renderer, int totalScore, int totalStars)
     SDL_RenderFillRect(renderer, &bg);
 
     std::string title = "CAMPAIGN CONQUERED!";
-    float tw = BitmapFont::getTextWidth(title, 2.5f);
-    BitmapFont::drawText(renderer, title, (Constants::SCREEN_WIDTH - tw) / 2.0f, 50.0f, 2.5f, { 246, 224, 94, 255 });
+    float tw = BitmapFont::getTextWidth(title, 2.2f);
+    BitmapFont::drawText(renderer, title, (Constants::SCREEN_WIDTH - tw) / 2.0f, 50.0f, 2.2f, { 246, 224, 94, 255 });
 
     std::string sub = "ALL 24 BIOME MISSIONS COMPLETED!";
-    float subW = BitmapFont::getTextWidth(sub, 1.3f);
-    BitmapFont::drawText(renderer, sub, (Constants::SCREEN_WIDTH - subW) / 2.0f, 90.0f, 1.3f, { 72, 187, 120, 255 });
+    float subW = BitmapFont::getTextWidth(sub, 1.25f);
+    BitmapFont::drawText(renderer, sub, (Constants::SCREEN_WIDTH - subW) / 2.0f, 90.0f, 1.25f, { 72, 187, 120, 255 });
 
     // Victory Card
     SDL_FRect card = { 35.0f, 130.0f, static_cast<float>(Constants::SCREEN_WIDTH - 70), 320.0f };
@@ -808,8 +871,11 @@ void HUD::renderGameWon(SDL_Renderer* renderer, int totalScore, int totalStars)
 
     float cy = 155.0f;
     std::string s1 = "TOTAL STARS: " + std::to_string(totalStars) + " / 72";
-    float w1 = BitmapFont::getTextWidth(s1, 1.8f);
-    BitmapFont::drawText(renderer, s1, (Constants::SCREEN_WIDTH - w1) / 2.0f, cy, 1.8f, { 250, 204, 21, 255 });
+    float w1 = BitmapFont::getTextWidth(s1, 1.7f);
+    float s1X = (Constants::SCREEN_WIDTH - w1) / 2.0f;
+    BitmapFont::drawText(renderer, s1, s1X, cy, 1.7f, { 250, 204, 21, 255 });
+    drawStar(renderer, s1X - 15.0f, cy + 8.0f, 7.0f, { 250, 204, 21, 255 });
+    drawStar(renderer, s1X + w1 + 15.0f, cy + 8.0f, 7.0f, { 250, 204, 21, 255 });
 
     cy += 40.0f;
     std::string s2 = "FINAL SCORE: " + std::to_string(totalScore);

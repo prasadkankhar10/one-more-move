@@ -94,6 +94,15 @@ bool SaveSystem::load(SaveData& data, const std::string& filename)
         }
     }
 
+    // Retroactive star credit for previously cleared levels so old saves don't show 0 stars
+    for (int i = 1; i < data.highestLevel && i <= 24; ++i)
+    {
+        if (data.levelStars[i] < 1)
+        {
+            data.levelStars[i] = 1;
+        }
+    }
+
     inFile.close();
     return true;
 }

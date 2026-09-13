@@ -32,6 +32,10 @@ bool Game::init()
         return false;
     }
 
+    // Preserve perfect 9:16 mobile aspect ratio on desktop window resizing
+    SDL_SetWindowAspectRatio(m_window, 450.0f / 800.0f, 450.0f / 800.0f);
+    SDL_SetWindowMinimumSize(m_window, 360, 640);
+
     m_renderer = SDL_CreateRenderer(m_window, nullptr);
     if (!m_renderer)
     {
@@ -1336,7 +1340,7 @@ void Game::render()
     switch (m_state)
     {
         case GameState::MainMenu:
-            m_hud.renderMainMenu(m_renderer, m_saveData.highScore, m_saveData.highestLevel, m_saveData.controlMode);
+            m_hud.renderMainMenu(m_renderer, m_saveData.highScore, m_saveData.highestLevel, m_saveData.controlMode, m_saveData.getTotalStars(), m_saveData.campaignCompleted);
             break;
         case GameState::LevelSelect:
             m_hud.renderLevelSelect(m_renderer, m_saveData.highestLevel, m_saveData.levelStars);
@@ -1345,7 +1349,7 @@ void Game::render()
             m_hud.renderSettings(m_renderer, m_saveData.controlMode, m_audio.isSoundOn(), m_saveData.hapticsOn, m_confirmReset);
             break;
         case GameState::GameWon:
-            m_hud.renderGameWon(m_renderer, m_saveData.getTotalStars(), m_saveData.highScore);
+            m_hud.renderGameWon(m_renderer, m_saveData.highScore, m_saveData.getTotalStars());
             break;
         case GameState::Playing:
             {

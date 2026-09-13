@@ -203,5 +203,136 @@ namespace BitmapFont
             curX += 9.0f * scale;
         }
     }
+
+    float drawTextWrapped(SDL_Renderer* renderer, const std::string& text, float x, float y, float maxWidth, float scale, SDL_Color color, float lineSpacing)
+    {
+        float curY = y;
+        float charW = 9.0f * scale;
+        
+        std::string currentLine = "";
+        std::string currentWord = "";
+
+        auto flushWord = [&](bool isNewline) {
+            float wordWidth = currentWord.length() * charW;
+            float lineWithWordWidth = (currentLine.empty() ? 0.0f : (currentLine.length() + 1) * charW) + wordWidth;
+
+            if (!currentLine.empty() && lineWithWordWidth > maxWidth)
+            {
+                drawText(renderer, currentLine, x, curY, scale, color);
+                curY += lineSpacing;
+                currentLine = currentWord;
+            }
+            else
+            {
+                if (!currentLine.empty()) currentLine += " ";
+                currentLine += currentWord;
+            }
+            currentWord = "";
+
+            if (isNewline)
+            {
+                if (!currentLine.empty())
+                {
+                    drawText(renderer, currentLine, x, curY, scale, color);
+                    curY += lineSpacing;
+                    currentLine = "";
+                }
+            }
+        };
+
+        for (size_t i = 0; i < text.length(); ++i)
+        {
+            char c = text[i];
+            if (c == ' ')
+            {
+                flushWord(false);
+            }
+            else if (c == '\n')
+            {
+                flushWord(true);
+            }
+            else
+            {
+                currentWord += c;
+            }
+        }
+
+        if (!currentWord.empty())
+        {
+            flushWord(false);
+        }
+
+        if (!currentLine.empty())
+        {
+            drawText(renderer, currentLine, x, curY, scale, color);
+            curY += lineSpacing;
+        }
+
+        return curY;
+    }
+
+    float getTextHeightWrapped(const std::string& text, float maxWidth, float scale, float lineSpacing)
+    {
+        float totalHeight = 0.0f;
+        float charW = 9.0f * scale;
+        
+        std::string currentLine = "";
+        std::string currentWord = "";
+
+        auto flushWord = [&](bool isNewline) {
+            float wordWidth = currentWord.length() * charW;
+            float lineWithWordWidth = (currentLine.empty() ? 0.0f : (currentLine.length() + 1) * charW) + wordWidth;
+
+            if (!currentLine.empty() && lineWithWordWidth > maxWidth)
+            {
+                totalHeight += lineSpacing;
+                currentLine = currentWord;
+            }
+            else
+            {
+                if (!currentLine.empty()) currentLine += " ";
+                currentLine += currentWord;
+            }
+            currentWord = "";
+
+            if (isNewline)
+            {
+                if (!currentLine.empty())
+                {
+                    totalHeight += lineSpacing;
+                    currentLine = "";
+                }
+            }
+        };
+
+        for (size_t i = 0; i < text.length(); ++i)
+        {
+            char c = text[i];
+            if (c == ' ')
+            {
+                flushWord(false);
+            }
+            else if (c == '\n')
+            {
+                flushWord(true);
+            }
+            else
+            {
+                currentWord += c;
+            }
+        }
+
+        if (!currentWord.empty())
+        {
+            flushWord(false);
+        }
+
+        if (!currentLine.empty())
+        {
+            totalHeight += lineSpacing;
+        }
+
+        return totalHeight;
+    }
 }
 

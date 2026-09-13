@@ -17,4 +17,10 @@ namespace BitmapFont
 
     // Calculates width of text in screen pixels at the given scale
     float getTextWidth(const std::string& text, float scale);
+
+    // Renders wrapped text bounded within maxWidth, breaking on whitespace. Returns final Y position.
+    float drawTextWrapped(SDL_Renderer* renderer, const std::string& text, float x, float y, float maxWidth, float scale, SDL_Color color, float lineSpacing = 16.0f);
+
+    // Calculates total rendered height of wrapped text
+    float getTextHeightWrapped(const std::string& text, float maxWidth, float scale, float lineSpacing = 16.0f);
 }

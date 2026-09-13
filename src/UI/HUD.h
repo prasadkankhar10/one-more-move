@@ -26,6 +26,10 @@ public:
     void renderGameWon(SDL_Renderer* renderer, int totalScore, int totalStars);
     void renderTutorialHint(SDL_Renderer* renderer, const std::string& hintText, float alpha);
 
+    // Visual Asset & Vector Renderers
+    static void drawStar(SDL_Renderer* renderer, float cx, float cy, float radius, SDL_Color color);
+    static void drawLogoBadge(SDL_Renderer* renderer, float cx, float cy, float scale);
+
     // Getters for touch buttons (so Game class can check tap inputs)
     const Button& getBtnUp() const { return m_btnUp; }
     const Button& getBtnDown() const { return m_btnDown; }
