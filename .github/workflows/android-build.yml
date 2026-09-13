@@ -53,6 +53,15 @@ jobs:
           # Place the SDL3 source folder into app/jni/SDL so gradle can build it
           cp -r sdl3-source android-build/app/jni/SDL
 
+          # Copy custom launcher icons for all Android screen densities
+          if [ -d "assets/android" ]; then
+            cp -r assets/android/* android-build/app/src/main/res/
+          fi
+
+          # Copy game assets into Android assets folder so they bundle inside the APK
+          mkdir -p android-build/app/src/main/assets/assets
+          cp -r assets/*.bmp android-build/app/src/main/assets/assets/ || true
+
       # 5. Build the Android project using Gradle wrapper
       - name: Build Debug APK with Gradle
         working-directory: ./android-build

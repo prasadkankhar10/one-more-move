@@ -10,6 +10,29 @@ HUD::HUD()
 
 HUD::~HUD()
 {
+    cleanupTextures();
+}
+
+void HUD::loadTextures(SDL_Renderer* renderer)
+{
+    if (!m_logoTexture && renderer)
+    {
+        SDL_Surface* surface = SDL_LoadBMP("assets/logo.bmp");
+        if (surface)
+        {
+            m_logoTexture = SDL_CreateTextureFromSurface(renderer, surface);
+            SDL_DestroySurface(surface);
+        }
+    }
+}
+
+void HUD::cleanupTextures()
+{
+    if (m_logoTexture)
+    {
+        SDL_DestroyTexture(m_logoTexture);
+        m_logoTexture = nullptr;
+    }
 }
 
 void HUD::drawStar(SDL_Renderer* renderer, float cx, float cy, float radius, SDL_Color color)
@@ -290,26 +313,35 @@ void HUD::renderPlaying(SDL_Renderer* renderer, int level, int moves, int score,
 
 void HUD::renderMainMenu(SDL_Renderer* renderer, int highScore, int highestLevel, int controlMode, int totalStars, bool campaignCompleted)
 {
-    // Draw Emblem Logo Badge at top of screen
-    drawLogoBadge(renderer, Constants::SCREEN_WIDTH / 2.0f, 36.0f, 0.9f);
+    if (m_logoTexture)
+    {
+        // Render crisp logo image (1024x512 aspect ratio = 2:1) centered at top
+        SDL_FRect logoRect = { 100.0f, 10.0f, 250.0f, 125.0f };
+        SDL_RenderTexture(renderer, m_logoTexture, nullptr, &logoRect);
+    }
+    else
+    {
+        // Draw Emblem Logo Badge at top of screen
+        drawLogoBadge(renderer, Constants::SCREEN_WIDTH / 2.0f, 36.0f, 0.9f);
 
-    // Draw Title: ONE MORE MOVE with shadow
-    std::string title = "ONE MORE MOVE";
-    float scale = 3.0f;
-    float titleWidth = BitmapFont::getTextWidth(title, scale);
-    float titleX = (Constants::SCREEN_WIDTH - titleWidth) / 2.0f;
+        // Draw Title: ONE MORE MOVE with shadow
+        std::string title = "ONE MORE MOVE";
+        float scale = 3.0f;
+        float titleWidth = BitmapFont::getTextWidth(title, scale);
+        float titleX = (Constants::SCREEN_WIDTH - titleWidth) / 2.0f;
 
-    // Drop shadow
-    BitmapFont::drawText(renderer, title, titleX + 2.0f, 70.0f, scale, { 0, 0, 0, 180 });
-    // Title Gold
-    BitmapFont::drawText(renderer, title, titleX, 68.0f, scale, { 246, 224, 94, 255 });
+        // Drop shadow
+        BitmapFont::drawText(renderer, title, titleX + 2.0f, 70.0f, scale, { 0, 0, 0, 180 });
+        // Title Gold
+        BitmapFont::drawText(renderer, title, titleX, 68.0f, scale, { 246, 224, 94, 255 });
 
-    // Subtitle
-    std::string sub = "TACTICAL ESCAPE";
-    float subScale = 1.5f;
-    float subWidth = BitmapFont::getTextWidth(sub, subScale);
-    float subX = (Constants::SCREEN_WIDTH - subWidth) / 2.0f;
-    BitmapFont::drawText(renderer, sub, subX, 108.0f, subScale, { 160, 174, 192, 255 });
+        // Subtitle
+        std::string sub = "TACTICAL ESCAPE";
+        float subScale = 1.5f;
+        float subWidth = BitmapFont::getTextWidth(sub, subScale);
+        float subX = (Constants::SCREEN_WIDTH - subWidth) / 2.0f;
+        BitmapFont::drawText(renderer, sub, subX, 108.0f, subScale, { 160, 174, 192, 255 });
+    }
 
     // Stats Card
     SDL_FRect statCard = { 45.0f, 142.0f, 360.0f, 125.0f };

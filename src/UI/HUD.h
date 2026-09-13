@@ -79,4 +79,10 @@ private:
     // Header buttons
     Button m_btnSound;
     Button m_btnPause;
+
+    SDL_Texture* m_logoTexture = nullptr;
+
+public:
+    void loadTextures(SDL_Renderer* renderer);
+    void cleanupTextures();
 };

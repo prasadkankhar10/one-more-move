@@ -36,6 +36,14 @@ bool Game::init()
     SDL_SetWindowAspectRatio(m_window, 450.0f / 800.0f, 450.0f / 800.0f);
     SDL_SetWindowMinimumSize(m_window, 360, 640);
 
+    // Set Window Icon if available
+    SDL_Surface* iconSurface = SDL_LoadBMP("assets/icon.bmp");
+    if (iconSurface)
+    {
+        SDL_SetWindowIcon(m_window, iconSurface);
+        SDL_DestroySurface(iconSurface);
+    }
+
     m_renderer = SDL_CreateRenderer(m_window, nullptr);
     if (!m_renderer)
     {
@@ -53,6 +61,7 @@ bool Game::init()
     // Initialize systems
     m_audio.init();
     m_hud.init();
+    m_hud.loadTextures(m_renderer);
 
     // Resolve safe pref path for save file (cross-platform storage compliance)
     char* prefPath = SDL_GetPrefPath("GoogleDeepMind", "OneMoreMove");
